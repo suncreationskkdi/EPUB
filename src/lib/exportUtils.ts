@@ -88,144 +88,6 @@ const markdownToHtml = (markdown: string): string => {
   return html;
 };
 
-// Helper function to parse content into chunks (same as Preview component)
-interface ContentChunk {
-  type: 'markdown' | 'right' | 'center' | 'poem' | 'poem2' | 'title';
-  content: string;
-}
-
-const parseContentToChunks = (content: string): ContentChunk[] => {
-  const chunks: ContentChunk[] = [];
-  const lines = content.split('\n');
-  let currentChunk: { type: 'markdown' | 'poem' | 'poem2'; lines: string[] } = { type: 'markdown', lines: [] };
-  let inPoem = false;
-  let inPoem2 = false;
-
-  for (const line of lines) {
-    if (inPoem2) {
-      if (line.trim() === '++') {
-        inPoem2 = false;
-        if (currentChunk.lines.length > 0) {
-          chunks.push({ type: 'poem2', content: currentChunk.lines.join('\n') });
-        }
-        currentChunk = { type: 'markdown', lines: [] };
-      } else {
-        currentChunk.lines.push(line);
-      }
-      continue;
-    }
-
-    if (inPoem) {
-      if (line.trim() === '~~') {
-        inPoem = false;
-        if (currentChunk.lines.length > 0) {
-          chunks.push({ type: 'poem', content: currentChunk.lines.join('\n') });
-        }
-        currentChunk = { type: 'markdown', lines: [] };
-      } else {
-        currentChunk.lines.push(line);
-      }
-      continue;
-    }
-
-    const trimmedLine = line.trim();
-    if (trimmedLine.startsWith('# ')) {
-       if (currentChunk.lines.length > 0) {
-        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
-      }
-      chunks.push({ type: 'title', content: trimmedLine.replace('# ', '') });
-      currentChunk = { type: 'markdown', lines: [] };
-    } else if (trimmedLine.startsWith('-r')) {
-      if (currentChunk.lines.length > 0) {
-        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
-      }
-      chunks.push({ type: 'right', content: line.substring(line.indexOf('-r') + 2) });
-      currentChunk = { type: 'markdown', lines: [] };
-    } else if (trimmedLine.startsWith('-c')) {
-      if (currentChunk.lines.length > 0) {
-        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
-      }
-      chunks.push({ type: 'center', content: line.substring(line.indexOf('-c') + 2) });
-      currentChunk = { type: 'markdown', lines: [] };
-    } else if (trimmedLine === '~') {
-      if (currentChunk.lines.length > 0) {
-        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
-      }
-      inPoem = true;
-      currentChunk = { type: 'poem', lines: [] };
-    } else if (trimmedLine === '+') {
-      if (currentChunk.lines.length > 0) {
-        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
-      }
-      inPoem2 = true;
-      currentChunk = { type: 'poem2', lines: [] };
-    } else {
-      currentChunk.lines.push(line);
-    }
-  }
-
-  if (currentChunk.lines.length > 0) {
-    chunks.push({ type: currentChunk.type, content: currentChunk.lines.join('\n') });
-  }
-
-  return chunks;
-};
-
-// Helper function to convert markdown to plain text
-const markdownToPlainText = (markdown: string): string => {
-  let text = markdown;
-  
-  // Handle special formatting blocks first
-  // Handle poem blocks
-  text = text.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
-    const lines = content.split('\n').map((line: string, index: number) => 
-      index % 2 === 1 ? `    ${line}` : line
-    ).join('\n');
-    return `\n${lines}\n`;
-  });
-  
-  // Handle poem2 blocks (all lines indented)
-  text = text.replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
-    const lines = content.split('\n').map((line: string) => `    ${line}`).join('\n');
-    return `\n${lines}\n`;
-  });
-  
-  // Handle custom alignment
-  text = text.replace(/^-r\s*(.*$)/gm, '                                        $1'); // Right align with spaces
-  text = text.replace(/^-c\s*(.*$)/gm, '                    $1'); // Center align with spaces
-  
-  // Remove markdown formatting
-  text = text.replace(/^### (.*$)/gm, '$1'); // H3
-  text = text.replace(/^## (.*$)/gm, '$1'); // H2
-  text = text.replace(/^# (.*$)/gm, '$1'); // H1
-  
-  // Remove bold and italic
-  text = text.replace(/\*\*(.*?)\*\*/g, '$1');
-  text = text.replace(/\*(.*?)\*/g, '$1');
-  
-  // Remove code blocks and inline code
-  text = text.replace(/```[\s\S]*?```/g, '');
-  text = text.replace(/`(.*?)`/g, '$1');
-  
-  // Handle blockquotes
-  text = text.replace(/^> (.*$)/gm, '    "$1"');
-  
-  // Handle lists
-  text = text.replace(/^- (.*$)/gm, '• $1');
-  text = text.replace(/^\d+\. (.*$)/gm, '$1');
-  
-  // Handle links
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
-  
-  // Remove images
-  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '[Image: $1]');
-  
-  // Clean up extra whitespace
-  text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
-  
-  return text.trim();
-};
-
 const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string => {
   const coverPage = details.coverImage ? 
     `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
@@ -241,89 +103,16 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
   </div>`;
 
-  // Helper function to split content into pages
-  const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
-    const htmlContent = markdownToHtml(content);
-    const maxContentLength = 2000; // Even more conservative for lengthy paragraphs
-    
-    if (htmlContent.length <= maxContentLength) {
-      return [htmlContent];
-    }
-    
-    // Split by paragraphs first, then by sentences if paragraphs are too long
-    let paragraphs = htmlContent.split('</p>').filter(p => p.trim());
-    
-    // Handle very long paragraphs by splitting them at sentence boundaries
-    const processedParagraphs: string[] = [];
-    paragraphs.forEach(paragraph => {
-      const fullParagraph = paragraph + '</p>';
-      if (fullParagraph.length > 1500) { // If paragraph is too long
-        // Extract the text content and split by sentences
-        const textContent = fullParagraph.replace(/<[^>]*>/g, '');
-        const sentences = textContent.split(/(?<=[.!?])\s+/);
-        
-        let currentChunk = '';
-        const paragraphTag = fullParagraph.match(/<p[^>]*>/)?.[0] || '<p>';
-        
-        sentences.forEach((sentence, index) => {
-          const testChunk = currentChunk + (currentChunk ? ' ' : '') + sentence;
-          if (testChunk.length > 800 && currentChunk.length > 0) {
-            // Close current chunk and start new one
-            processedParagraphs.push(paragraphTag + currentChunk + '</p>');
-            currentChunk = sentence;
-          } else {
-            currentChunk = testChunk;
-          }
-          
-          // Add remaining content as last chunk
-          if (index === sentences.length - 1 && currentChunk) {
-            processedParagraphs.push(paragraphTag + currentChunk + '</p>');
-          }
-        });
-      } else {
-        processedParagraphs.push(fullParagraph);
-      }
-    });
-    
-    paragraphs = processedParagraphs;
-    const pages: string[] = [];
-    let currentPage = '';
-    let isFirstPage = true;
-    
-    paragraphs.forEach((paragraph, index) => {
-      const fullParagraph = paragraph;
-      
-      // If adding this paragraph would exceed the limit and we have content, start a new page
-      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 300) {
-        pages.push(currentPage);
-        currentPage = fullParagraph;
-        isFirstPage = false;
-      } else {
-        currentPage += fullParagraph;
-      }
-    });
-    
-    // Add the last page
-    if (currentPage.length > 0) {
-      pages.push(currentPage);
-    }
-    
-    return pages.length > 0 ? pages : [htmlContent];
-  };
-
-  const chapterPages = chapters.flatMap(chapter => {
+  const chapterPages = chapters.map(chapter => {
     const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
-    const contentPages = splitContentIntoPages(contentWithoutTitle, chapter.title);
+    const htmlContent = markdownToHtml(contentWithoutTitle);
     
-    return contentPages.map((pageContent, pageIndex) => {
-      const showTitle = pageIndex === 0; // Only show title on first page of chapter
-      return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-        <div class="chapter-content" style="padding: 2rem;">
-          ${showTitle ? `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>` : ''}
-          ${pageContent}
-        </div>
-      </div>`;
-    });
+    return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+      <div class="chapter-content" style="padding: 2rem;">
+        <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
+        ${htmlContent}
+      </div>
+    </div>`;
   }).join('');
 
   return `
@@ -340,44 +129,26 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           padding: 0; 
           background: white;
           color: black;
-          word-break: break-word;
-          overflow-wrap: anywhere;
-          hyphens: auto;
+        }
+        .page {
           width: 210mm; 
-          height: 297mm; 
+          min-height: 297mm; 
           padding: 20mm; 
-          padding-top: 15mm;
-          padding-bottom: 15mm;
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
           color: black;
           margin: 0 auto 2rem auto;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
         }
         .chapter-content {
-          flex: 1;
-          overflow: visible;
-          max-height: calc(297mm - 30mm);
-        }
-        .chapter-content > * {
-          page-break-inside: avoid;
-        }
-        .chapter-content p {
-          orphans: 2;
-          widows: 2;
-          word-break: break-word;
-          overflow-wrap: anywhere;
-          hyphens: auto;
+          width: 100%;
+          height: 100%;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
           color: ${details.colors.chapterTitle};
           text-align: ${details.chapterAlignment};
-          page-break-after: avoid;
         }
         h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
         h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -455,6 +226,61 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   `;
 };
 
+// Helper function to convert markdown to plain text
+const markdownToPlainText = (markdown: string): string => {
+  let text = markdown;
+  
+  // Handle special formatting blocks first
+  // Handle poem blocks
+  text = text.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
+    const lines = content.split('\n').map((line: string, index: number) => 
+      index % 2 === 1 ? `    ${line}` : line
+    ).join('\n');
+    return `\n${lines}\n`;
+  });
+  
+  // Handle poem2 blocks (all lines indented)
+  text = text.replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
+    const lines = content.split('\n').map((line: string) => `    ${line}`).join('\n');
+    return `\n${lines}\n`;
+  });
+  
+  // Handle custom alignment
+  text = text.replace(/^-r\s*(.*$)/gm, '                                        $1'); // Right align with spaces
+  text = text.replace(/^-c\s*(.*$)/gm, '                    $1'); // Center align with spaces
+  
+  // Remove markdown formatting
+  text = text.replace(/^### (.*$)/gm, '$1'); // H3
+  text = text.replace(/^## (.*$)/gm, '$1'); // H2
+  text = text.replace(/^# (.*$)/gm, '$1'); // H1
+  
+  // Remove bold and italic
+  text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+  text = text.replace(/\*(.*?)\*/g, '$1');
+  
+  // Remove code blocks and inline code
+  text = text.replace(/```[\s\S]*?```/g, '');
+  text = text.replace(/`(.*?)`/g, '$1');
+  
+  // Handle blockquotes
+  text = text.replace(/^> (.*$)/gm, '    "$1"');
+  
+  // Handle lists
+  text = text.replace(/^- (.*$)/gm, '• $1');
+  text = text.replace(/^\d+\. (.*$)/gm, '$1');
+  
+  // Handle links
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+  
+  // Remove images
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '[Image: $1]');
+  
+  // Clean up extra whitespace
+  text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+  
+  return text.trim();
+};
+
 export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => {
   // Create a temporary HTML document for PDF generation
   const htmlContent = generateHtmlContent(details, chapters);
@@ -504,8 +330,8 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
 export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]) => {
   // Create a temporary HTML document for PDF generation with smaller page size
   const htmlContent = generateHtmlContent(details, chapters).replace(
-    'width: 210mm; height: 297mm;',
-    'width: 203.2mm; height: 152.4mm;'
+    'width: 210mm; min-height: 297mm;',
+    'width: 203.2mm; min-height: 152.4mm;'
   );
   
   // Create a temporary iframe to render the HTML
@@ -582,14 +408,11 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         color: ${details.colors.paragraph};
         margin: 0;
         padding: 1rem;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
       }
       h1, h2, h3 { 
         font-family: 'Noto Serif', serif;
         color: ${details.colors.chapterTitle};
         text-align: ${details.chapterAlignment};
-        page-break-after: avoid;
       }
       h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
       h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -599,11 +422,6 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         text-align: justify;
         color: ${details.colors.paragraph};
         text-indent: ${details.paragraphIndent ? '2em' : '0'};
-        word-break: break-word;
-        overflow-wrap: anywhere;
-        hyphens: auto;
-        orphans: 2;
-        widows: 2;
       }
       p.align-right { text-align: right; }
       p.align-center { text-align: center; }
@@ -677,125 +495,29 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
 </html>`);
     }
 
-    // Helper function to split chapter content for EPUB
-    const splitChapterForEPUB = (chapter: Chapter, chapterIndex: number) => {
+    // Create XHTML files for each chapter
+    const chapterFiles = chapters.map((chapter, i) => {
         const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+        const htmlContent = markdownToHtml(contentWithoutTitle);
         
-        // Parse content into chunks like in Preview component
-        const contentWithTitle = `# ${chapter.title}\n${contentWithoutTitle}`;
-        const chunks = parseContentToChunks(contentWithTitle);
-        
-        // Split chunks into pages based on estimated content height
-        const splitIntoPages = (chunks: any[]) => {
-            const pages: any[][] = [];
-            let currentPage: any[] = [];
-            let currentPageHeight = 0;
-            const maxPageHeight = 200; // Lines per EPUB page
-            
-            chunks.forEach(chunk => {
-                let chunkHeight = 0;
-                
-                switch (chunk.type) {
-                    case 'title':
-                        chunkHeight = 6;
-                        break;
-                    case 'markdown':
-                        const paragraphs = chunk.content.split('\n\n').filter((p: string) => p.trim());
-                        chunkHeight = paragraphs.reduce((acc: number, p: string) => {
-                            const lines = Math.ceil(p.length / 80);
-                            return acc + Math.max(lines, 1) + 1;
-                        }, 0);
-                        break;
-                    case 'poem':
-                    case 'poem2':
-                        chunkHeight = chunk.content.split('\n').length + 2;
-                        break;
-                    default:
-                        chunkHeight = Math.ceil(chunk.content.length / 80) + 1;
-                }
-                
-                if (currentPageHeight + chunkHeight > maxPageHeight && currentPage.length > 0) {
-                    pages.push([...currentPage]);
-                    currentPage = [chunk];
-                    currentPageHeight = chunkHeight;
-                } else {
-                    currentPage.push(chunk);
-                    currentPageHeight += chunkHeight;
-                }
-            });
-            
-            if (currentPage.length > 0) {
-                pages.push(currentPage);
-            }
-            
-            return pages.length > 0 ? pages : [chunks];
+        return {
+            id: `chapter-${i + 1}`,
+            href: `chapter-${i + 1}.xhtml`,
+            title: chapter.title,
+            content: htmlContent
         };
-        
-        const pages = splitIntoPages(chunks);
-        
-        return pages.map((pageChunks, pageIndex) => {
-            let htmlContent = '';
-            let showTitle = false;
-            
-            pageChunks.forEach(chunk => {
-                switch (chunk.type) {
-                    case 'title':
-                        showTitle = true;
-                        break;
-                    case 'right':
-                        htmlContent += `<p style="text-align: right;">${chunk.content}</p>`;
-                        break;
-                    case 'center':
-                        htmlContent += `<p style="text-align: center;">${chunk.content}</p>`;
-                        break;
-                    case 'poem':
-                        const poemLines = chunk.content.split('\n').map((line: string, i: number) => 
-                            `<p style="margin: 0; ${i % 2 === 1 ? 'text-indent: 2em;' : ''}">${line}</p>`
-                        ).join('');
-                        htmlContent += `<div class="poem" style="margin: 1rem 0;">${poemLines}</div>`;
-                        break;
-                    case 'poem2':
-                        const poem2Lines = chunk.content.split('\n').map((line: string) => 
-                            `<p style="margin: 0; text-indent: 2em;">${line}</p>`
-                        ).join('');
-                        htmlContent += `<div class="poem2" style="margin: 1rem 0;">${poem2Lines}</div>`;
-                        break;
-                    case 'markdown':
-                        htmlContent += markdownToHtml(chunk.content);
-                        break;
-                }
-            });
-            
-            return [{
-                id: pageIndex === 0 ? `chapter-${chapterIndex + 1}` : `chapter-${chapterIndex + 1}-part-${pageIndex + 1}`,
-                href: pageIndex === 0 ? `chapter-${chapterIndex + 1}.xhtml` : `chapter-${chapterIndex + 1}-part-${pageIndex + 1}.xhtml`,
-                title: pageIndex === 0 ? chapter.title : `${chapter.title} (continued)`,
-                content: htmlContent,
-                showTitle: showTitle
-            }];
-        }).flat();
-    };
-
-    const chapterFiles = chapters.flatMap((chapter, i) => {
-        return splitChapterForEPUB(chapter, i);
     });
 
-    // Create XHTML files for each chapter part
     chapterFiles.forEach(chapterFile => {
-        
         oebps?.file(chapterFile.href, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
   <title>${chapterFile.title}</title>
   <link href="style.css" rel="stylesheet" type="text/css"/>
-  <style>
-    body { word-wrap: break-word; overflow-wrap: break-word; }
-    p { orphans: 2; widows: 2; }
-  </style>
 </head>
 <body>
-  ${chapterFile.showTitle ? `<h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapterFile.title}</h1>` : ''}
+  <h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapterFile.title}</h1>
   ${chapterFile.content}
 </body>
 </html>`);
@@ -827,10 +549,10 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
   </metadata>
   <manifest>${manifestItems}</manifest>
   <spine toc="ncx">${spineItems}</spine>
-</package>`.replace(/\${details\.colors\.(bookTitle|chapterTitle|paragraph)}/g, (match, colorType) => details.colors[colorType as keyof typeof details.colors]).replace(/\${details\.paragraphIndent \? '2em' : '0'}/g, details.paragraphIndent ? '2em' : '0'));
+</package>`);
 
     // Create navigation points for table of contents
-    const navPoints = chapterFiles.filter(f => f.showTitle).map((f, i) => 
+    const navPoints = chapterFiles.map((f, i) => 
       `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${f.title}</text></navLabel><content src="${f.href}"/></navPoint>`
     ).join('\n');
     
