@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { BookDetails, Chapter } from '../types';
