@@ -32,7 +32,7 @@ const Preview: React.FC = () => {
         </div>
         
         {/* Continuous content preview */}
-        <div className="bg-white text-black font-serif p-8 max-w-4xl mx-auto">
+        <div className="bg-white text-black font-serif p-8 max-w-4xl mx-auto" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
           {chapters.map((chapter) => (
             <div key={chapter.id} className="mb-12">
               <h1 className={`text-4xl font-bold mb-8 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }}>
@@ -47,22 +47,22 @@ const Preview: React.FC = () => {
                   p: ({node, ...props}) => {
                     const content = props.children?.toString() || '';
                     if (content.startsWith('-r ')) {
-                      return <p className="text-right my-4" style={{ color: colors.paragraph }} {...props}>{content.substring(3)}</p>;
+                      return <p className="text-right my-4" style={{ color: colors.paragraph, wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props}>{content.substring(3)}</p>;
                     }
                     if (content.startsWith('-c ')) {
-                      return <p className="text-center my-4" style={{ color: colors.paragraph }} {...props}>{content.substring(3)}</p>;
+                      return <p className="text-center my-4" style={{ color: colors.paragraph, wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props}>{content.substring(3)}</p>;
                     }
-                    return <p className="my-4 leading-relaxed text-justify" style={{ color: colors.paragraph, textIndent: paragraphIndent ? '2em' : '0' }} {...props} />;
+                    return <p className="my-4 leading-relaxed text-justify" style={{ color: colors.paragraph, textIndent: paragraphIndent ? '2em' : '0', wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props} />;
                   },
-                  ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" {...props} />,
-                  ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" {...props} />,
-                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props} />,
+                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props} />,
                   img: ({node, ...props}) => <img className="max-w-full h-auto my-4" {...props} />,
-                  a: ({node, ...props}) => <a className="text-blue-600 hover:underline" {...props} />,
+                  a: ({node, ...props}) => <a className="text-blue-600 hover:underline" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }} {...props} />,
                   code: ({node, inline, ...props}) => 
                     inline ? 
                       <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} /> : 
-                      <pre className="bg-gray-100 p-4 rounded my-4 overflow-x-auto"><code {...props} /></pre>,
+                      <pre className="bg-gray-100 p-4 rounded my-4 overflow-x-auto" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}><code {...props} /></pre>,
                 }}
               >
                 {chapter.content.replace(/^# .*\n?/, '').replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
