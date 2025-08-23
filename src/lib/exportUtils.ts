@@ -158,16 +158,55 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
   </div>`;
 
-  const chapterPages = chapters.map(chapter => {
-    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
-    const htmlContent = markdownToHtml(contentWithoutTitle);
+  // Helper function to split content into pages
+  const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
+    const htmlContent = markdownToHtml(content);
+    const maxContentLength = 3000; // Approximate characters per page
     
-    return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-      <div class="chapter-content" style="padding: 2rem;">
-        <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
-        ${htmlContent}
-      </div>
-    </div>`;
+    if (htmlContent.length <= maxContentLength) {
+      return [htmlContent];
+    }
+    
+    // Split by paragraphs and group them into pages
+    const paragraphs = htmlContent.split('</p>').filter(p => p.trim());
+    const pages: string[] = [];
+    let currentPage = '';
+    let isFirstPage = true;
+    
+    paragraphs.forEach((paragraph, index) => {
+      const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
+      
+      // If adding this paragraph would exceed the limit, start a new page
+      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = fullParagraph;
+        isFirstPage = false;
+      } else {
+        currentPage += fullParagraph;
+      }
+    });
+    
+    // Add the last page
+    if (currentPage.length > 0) {
+      pages.push(currentPage);
+    }
+    
+    return pages.length > 0 ? pages : [htmlContent];
+  };
+
+  const chapterPages = chapters.flatMap(chapter => {
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const contentPages = splitContentIntoPages(contentWithoutTitle, chapter.title);
+    
+    return contentPages.map((pageContent, pageIndex) => {
+      const showTitle = pageIndex === 0; // Only show title on first page of chapter
+      return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+        <div class="chapter-content" style="padding: 2rem;">
+          ${showTitle ? `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>` : ''}
+          ${pageContent}
+        </div>
+      </div>`;
+    });
   }).join('');
 
   return `
@@ -464,15 +503,72 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
 </html>`);
     }
 
-    const chapterFiles = chapters.map((chapter, i) => {
+    // Helper function to split chapter content for EPUB
+    const splitChapterForEPUB = (chapter: Chapter, chapterIndex: number) => {
         const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
         const htmlContent = markdownToHtml(contentWithoutTitle);
+        const maxContentLength = 4000; // Slightly larger for EPUB
         
-        oebps?.file(`chapter-${i + 1}.xhtml`, `<?xml version="1.0" encoding="UTF-8"?>
+        if (htmlContent.length <= maxContentLength) {
+            return [{
+                id: `chapter-${chapterIndex + 1}`,
+                href: `chapter-${chapterIndex + 1}.xhtml`,
+                title: chapter.title,
+                content: htmlContent,
+                showTitle: true
+            }];
+        }
+        
+        // Split content into multiple files
+        const paragraphs = htmlContent.split('</p>').filter(p => p.trim());
+        const parts: Array<{id: string, href: string, title: string, content: string, showTitle: boolean}> = [];
+        let currentContent = '';
+        let partIndex = 1;
+        
+        paragraphs.forEach((paragraph, index) => {
+            const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
+            
+            if (currentContent.length + fullParagraph.length > maxContentLength && currentContent.length > 0) {
+                parts.push({
+                    id: `chapter-${chapterIndex + 1}-part-${partIndex}`,
+                    href: `chapter-${chapterIndex + 1}-part-${partIndex}.xhtml`,
+                    title: partIndex === 1 ? chapter.title : `${chapter.title} (continued)`,
+                    content: currentContent,
+                    showTitle: partIndex === 1
+                });
+                currentContent = fullParagraph;
+                partIndex++;
+            } else {
+                currentContent += fullParagraph;
+            }
+        });
+        
+        // Add the last part
+        if (currentContent.length > 0) {
+            parts.push({
+                id: `chapter-${chapterIndex + 1}-part-${partIndex}`,
+                href: `chapter-${chapterIndex + 1}-part-${partIndex}.xhtml`,
+                title: partIndex === 1 ? chapter.title : `${chapter.title} (continued)`,
+                content: currentContent,
+                showTitle: partIndex === 1
+            });
+        }
+        
+        return parts;
+    };
+
+    const chapterFiles = chapters.flatMap((chapter, i) => {
+        return splitChapterForEPUB(chapter, i);
+    });
+
+    // Create XHTML files for each chapter part
+    chapterFiles.forEach(chapterFile => {
+        
+        oebps?.file(chapterFile.href, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head>
-  <title>${chapter.title}</title>
+  <title>${chapterFile.title}</title>
   <link href="style.css" rel="stylesheet" type="text/css"/>
   <style>
     body { word-wrap: break-word; overflow-wrap: break-word; }
@@ -480,11 +576,10 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
   </style>
 </head>
 <body>
-  <h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapter.title}</h1>
-  ${htmlContent}
+  ${chapterFile.showTitle ? `<h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapterFile.title}</h1>` : ''}
+  ${chapterFile.content}
 </body>
 </html>`);
-        return { id: `chapter-${i + 1}`, href: `chapter-${i + 1}.xhtml` };
     });
 
     const manifestItems = [
@@ -515,8 +610,9 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
   <spine toc="ncx">${spineItems}</spine>
 </package>`.replace(/\${details\.colors\.(bookTitle|chapterTitle|paragraph)}/g, (match, colorType) => details.colors[colorType as keyof typeof details.colors]).replace(/\${details\.paragraphIndent \? '2em' : '0'}/g, details.paragraphIndent ? '2em' : '0'));
 
-    const navPoints = chapters.map((c, i) => 
-      `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${c.title}</text></navLabel><content src="chapter-${i+1}.xhtml"/></navPoint>`
+    // Create navigation points for table of contents
+    const navPoints = chapterFiles.filter(f => f.showTitle).map((f, i) => 
+      `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${f.title}</text></navLabel><content src="${f.href}"/></navPoint>`
     ).join('\n');
     
     oebps?.file('toc.ncx', `<?xml version="1.0" encoding="UTF-8"?>

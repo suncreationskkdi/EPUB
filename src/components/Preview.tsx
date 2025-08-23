@@ -115,63 +115,120 @@ const Preview: React.FC = () => {
         {chapters.map((chapter) => {
           const contentWithTitle = `# ${chapter.title}\n${chapter.content.replace(/^# .*\n?/, '')}`;
           const chunks = parseContentToChunks(contentWithTitle);
+          
+          // Split content into pages based on estimated content height
+          const splitIntoPages = (chunks: ContentChunk[]) => {
+            const pages: ContentChunk[][] = [];
+            let currentPage: ContentChunk[] = [];
+            let currentPageHeight = 0;
+            const maxPageHeight = 250; // Approximate lines per page
+            
+            chunks.forEach(chunk => {
+              let chunkHeight = 0;
+              
+              // Estimate height based on content type and length
+              switch (chunk.type) {
+                case 'title':
+                  chunkHeight = 8; // Large heading takes more space
+                  break;
+                case 'markdown':
+                  // Count paragraphs and estimate lines
+                  const paragraphs = chunk.content.split('\n\n').filter(p => p.trim());
+                  chunkHeight = paragraphs.reduce((acc, p) => {
+                    const lines = Math.ceil(p.length / 80); // ~80 chars per line
+                    return acc + Math.max(lines, 1) + 1; // +1 for paragraph spacing
+                  }, 0);
+                  break;
+                case 'poem':
+                case 'poem2':
+                  chunkHeight = chunk.content.split('\n').length + 2;
+                  break;
+                default:
+                  chunkHeight = Math.ceil(chunk.content.length / 80) + 1;
+              }
+              
+              // If adding this chunk would exceed page height, start new page
+              if (currentPageHeight + chunkHeight > maxPageHeight && currentPage.length > 0) {
+                pages.push([...currentPage]);
+                currentPage = [chunk];
+                currentPageHeight = chunkHeight;
+              } else {
+                currentPage.push(chunk);
+                currentPageHeight += chunkHeight;
+              }
+            });
+            
+            // Add the last page if it has content
+            if (currentPage.length > 0) {
+              pages.push(currentPage);
+            }
+            
+            return pages.length > 0 ? pages : [chunks]; // Fallback to single page
+          };
+          
+          const pages = splitIntoPages(chunks);
+          
           return (
-            <div key={chapter.id} className="preview-page bg-white text-black font-serif">
-              <div className="chapter-content">
-              {chunks.map((chunk, index) => {
-                switch (chunk.type) {
-                  case 'title':
-                    return <h1 key={index} className={`text-4xl font-bold mb-8 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }}>{chunk.content}</h1>;
-                  case 'right':
-                    return <p key={index} className="text-right">{chunk.content}</p>;
-                  case 'center':
-                    return <p key={index} className="text-center">{chunk.content}</p>;
-                  case 'poem':
-                    return (
-                      <div key={index} className="poem my-4">
-                        {chunk.content.split('\n').map((line, i) => (
-                          <p key={i} className="m-0">{line}</p>
-                        ))}
-                      </div>
-                    );
-                  case 'poem2':
-                    return (
-                      <div key={index} className="poem2 my-4">
-                        {chunk.content.split('\n').map((line, i) => (
-                          <p key={i} className="m-0 ml-8">{line}</p>
-                        ))}
-                      </div>
-                    );
-                  case 'markdown':
-                    return (
-                      <ReactMarkdown
-                        key={index}
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          h2: ({node, ...props}) => <h2 className="text-3xl font-bold mt-6 mb-4 font-serif" {...props} />,
-                          h2: ({node, ...props}) => <h2 className={`text-3xl font-bold mt-6 mb-4 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }} {...props} />,
-                          h3: ({node, ...props}) => <h3 className={`text-2xl font-bold mt-4 mb-3 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }} {...props} />,
-                          p: ({node, ...props}) => <p className="my-4 leading-relaxed text-justify" style={{ color: colors.paragraph, textIndent: paragraphIndent ? '2em' : '0' }} {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" {...props} />,
-                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,
-                          img: ({node, ...props}) => <img className="max-w-full h-auto my-4" {...props} />,
-                          a: ({node, ...props}) => <a className="text-blue-600 hover:underline" {...props} />,
-                          code: ({node, inline, ...props}) => 
-                            inline ? 
-                              <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} /> : 
-                              <pre className="bg-gray-100 p-4 rounded my-4 overflow-x-auto"><code {...props} /></pre>,
-                        }}
-                      >
-                        {chunk.content}
-                      </ReactMarkdown>
-                    );
-                  default:
-                    return null;
-                }
-              })}
-              </div>
-            </div>
+            <React.Fragment key={chapter.id}>
+              {pages.map((pageChunks, pageIndex) => (
+                <div key={`${chapter.id}-page-${pageIndex}`} className="preview-page bg-white text-black font-serif">
+                  <div className="chapter-content">
+                    {pageChunks.map((chunk, chunkIndex) => {
+                      const key = `${pageIndex}-${chunkIndex}`;
+                      switch (chunk.type) {
+                        case 'title':
+                          return <h1 key={key} className={`text-4xl font-bold mb-8 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }}>{chunk.content}</h1>;
+                        case 'right':
+                          return <p key={key} className="text-right">{chunk.content}</p>;
+                        case 'center':
+                          return <p key={key} className="text-center">{chunk.content}</p>;
+                        case 'poem':
+                          return (
+                            <div key={key} className="poem my-4">
+                              {chunk.content.split('\n').map((line, i) => (
+                                <p key={i} className="m-0">{line}</p>
+                              ))}
+                            </div>
+                          );
+                        case 'poem2':
+                          return (
+                            <div key={key} className="poem2 my-4">
+                              {chunk.content.split('\n').map((line, i) => (
+                                <p key={i} className="m-0 ml-8">{line}</p>
+                              ))}
+                            </div>
+                          );
+                        case 'markdown':
+                          return (
+                            <ReactMarkdown
+                              key={key}
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h2: ({node, ...props}) => <h2 className={`text-3xl font-bold mt-6 mb-4 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }} {...props} />,
+                                h3: ({node, ...props}) => <h3 className={`text-2xl font-bold mt-4 mb-3 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }} {...props} />,
+                                p: ({node, ...props}) => <p className="my-4 leading-relaxed text-justify" style={{ color: colors.paragraph, textIndent: paragraphIndent ? '2em' : '0' }} {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" {...props} />,
+                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,
+                                img: ({node, ...props}) => <img className="max-w-full h-auto my-4" {...props} />,
+                                a: ({node, ...props}) => <a className="text-blue-600 hover:underline" {...props} />,
+                                code: ({node, inline, ...props}) => 
+                                  inline ? 
+                                    <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} /> : 
+                                    <pre className="bg-gray-100 p-4 rounded my-4 overflow-x-auto"><code {...props} /></pre>,
+                              }}
+                            >
+                              {chunk.content}
+                            </ReactMarkdown>
+                          );
+                        default:
+                          return null;
+                      }
+                    })}
+                  </div>
+                </div>
+              ))}
+            </React.Fragment>
           );
         })}
       </div>
