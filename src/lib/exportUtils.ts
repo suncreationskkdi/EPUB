@@ -165,10 +165,10 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           ${isFirstPage ? chapterTitle : ''}
           ${currentPageContent}
         </div>
-        <div class="page-number">${pageNumber}</div>
+        <div class="page-number" style="position: absolute; bottom: 15mm; right: 25mm; font-family: 'Noto Sans', sans-serif; font-size: 12px; color: #666;">${pageNumber}</div>
       </div>`;
       pages.push(pageContent);
-       pageNumber++;
+      pageNumber++;
     }
     
     return pages;
