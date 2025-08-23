@@ -88,6 +88,89 @@ const markdownToHtml = (markdown: string): string => {
   return html;
 };
 
+// Helper function to parse content into chunks (same as Preview component)
+interface ContentChunk {
+  type: 'markdown' | 'right' | 'center' | 'poem' | 'poem2' | 'title';
+  content: string;
+}
+
+const parseContentToChunks = (content: string): ContentChunk[] => {
+  const chunks: ContentChunk[] = [];
+  const lines = content.split('\n');
+  let currentChunk: { type: 'markdown' | 'poem' | 'poem2'; lines: string[] } = { type: 'markdown', lines: [] };
+  let inPoem = false;
+  let inPoem2 = false;
+
+  for (const line of lines) {
+    if (inPoem2) {
+      if (line.trim() === '++') {
+        inPoem2 = false;
+        if (currentChunk.lines.length > 0) {
+          chunks.push({ type: 'poem2', content: currentChunk.lines.join('\n') });
+        }
+        currentChunk = { type: 'markdown', lines: [] };
+      } else {
+        currentChunk.lines.push(line);
+      }
+      continue;
+    }
+
+    if (inPoem) {
+      if (line.trim() === '~~') {
+        inPoem = false;
+        if (currentChunk.lines.length > 0) {
+          chunks.push({ type: 'poem', content: currentChunk.lines.join('\n') });
+        }
+        currentChunk = { type: 'markdown', lines: [] };
+      } else {
+        currentChunk.lines.push(line);
+      }
+      continue;
+    }
+
+    const trimmedLine = line.trim();
+    if (trimmedLine.startsWith('# ')) {
+       if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      chunks.push({ type: 'title', content: trimmedLine.replace('# ', '') });
+      currentChunk = { type: 'markdown', lines: [] };
+    } else if (trimmedLine.startsWith('-r')) {
+      if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      chunks.push({ type: 'right', content: line.substring(line.indexOf('-r') + 2) });
+      currentChunk = { type: 'markdown', lines: [] };
+    } else if (trimmedLine.startsWith('-c')) {
+      if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      chunks.push({ type: 'center', content: line.substring(line.indexOf('-c') + 2) });
+      currentChunk = { type: 'markdown', lines: [] };
+    } else if (trimmedLine === '~') {
+      if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      inPoem = true;
+      currentChunk = { type: 'poem', lines: [] };
+    } else if (trimmedLine === '+') {
+      if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      inPoem2 = true;
+      currentChunk = { type: 'poem2', lines: [] };
+    } else {
+      currentChunk.lines.push(line);
+    }
+  }
+
+  if (currentChunk.lines.length > 0) {
+    chunks.push({ type: currentChunk.type, content: currentChunk.lines.join('\n') });
+  }
+
+  return chunks;
+};
+
 // Helper function to convert markdown to plain text
 const markdownToPlainText = (markdown: string): string => {
   let text = markdown;
@@ -506,55 +589,100 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
     // Helper function to split chapter content for EPUB
     const splitChapterForEPUB = (chapter: Chapter, chapterIndex: number) => {
         const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
-        const htmlContent = markdownToHtml(contentWithoutTitle);
-        const maxContentLength = 4000; // Slightly larger for EPUB
         
-        if (htmlContent.length <= maxContentLength) {
-            return [{
-                id: `chapter-${chapterIndex + 1}`,
-                href: `chapter-${chapterIndex + 1}.xhtml`,
-                title: chapter.title,
-                content: htmlContent,
-                showTitle: true
-            }];
-        }
+        // Parse content into chunks like in Preview component
+        const contentWithTitle = `# ${chapter.title}\n${contentWithoutTitle}`;
+        const chunks = parseContentToChunks(contentWithTitle);
         
-        // Split content into multiple files
-        const paragraphs = htmlContent.split('</p>').filter(p => p.trim());
-        const parts: Array<{id: string, href: string, title: string, content: string, showTitle: boolean}> = [];
-        let currentContent = '';
-        let partIndex = 1;
-        
-        paragraphs.forEach((paragraph, index) => {
-            const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
+        // Split chunks into pages based on estimated content height
+        const splitIntoPages = (chunks: any[]) => {
+            const pages: any[][] = [];
+            let currentPage: any[] = [];
+            let currentPageHeight = 0;
+            const maxPageHeight = 200; // Lines per EPUB page
             
-            if (currentContent.length + fullParagraph.length > maxContentLength && currentContent.length > 0) {
-                parts.push({
-                    id: `chapter-${chapterIndex + 1}-part-${partIndex}`,
-                    href: `chapter-${chapterIndex + 1}-part-${partIndex}.xhtml`,
-                    title: partIndex === 1 ? chapter.title : `${chapter.title} (continued)`,
-                    content: currentContent,
-                    showTitle: partIndex === 1
-                });
-                currentContent = fullParagraph;
-                partIndex++;
-            } else {
-                currentContent += fullParagraph;
-            }
-        });
-        
-        // Add the last part
-        if (currentContent.length > 0) {
-            parts.push({
-                id: `chapter-${chapterIndex + 1}-part-${partIndex}`,
-                href: `chapter-${chapterIndex + 1}-part-${partIndex}.xhtml`,
-                title: partIndex === 1 ? chapter.title : `${chapter.title} (continued)`,
-                content: currentContent,
-                showTitle: partIndex === 1
+            chunks.forEach(chunk => {
+                let chunkHeight = 0;
+                
+                switch (chunk.type) {
+                    case 'title':
+                        chunkHeight = 6;
+                        break;
+                    case 'markdown':
+                        const paragraphs = chunk.content.split('\n\n').filter((p: string) => p.trim());
+                        chunkHeight = paragraphs.reduce((acc: number, p: string) => {
+                            const lines = Math.ceil(p.length / 80);
+                            return acc + Math.max(lines, 1) + 1;
+                        }, 0);
+                        break;
+                    case 'poem':
+                    case 'poem2':
+                        chunkHeight = chunk.content.split('\n').length + 2;
+                        break;
+                    default:
+                        chunkHeight = Math.ceil(chunk.content.length / 80) + 1;
+                }
+                
+                if (currentPageHeight + chunkHeight > maxPageHeight && currentPage.length > 0) {
+                    pages.push([...currentPage]);
+                    currentPage = [chunk];
+                    currentPageHeight = chunkHeight;
+                } else {
+                    currentPage.push(chunk);
+                    currentPageHeight += chunkHeight;
+                }
             });
-        }
+            
+            if (currentPage.length > 0) {
+                pages.push(currentPage);
+            }
+            
+            return pages.length > 0 ? pages : [chunks];
+        };
         
-        return parts;
+        const pages = splitIntoPages(chunks);
+        
+        return pages.map((pageChunks, pageIndex) => {
+            let htmlContent = '';
+            let showTitle = false;
+            
+            pageChunks.forEach(chunk => {
+                switch (chunk.type) {
+                    case 'title':
+                        showTitle = true;
+                        break;
+                    case 'right':
+                        htmlContent += `<p style="text-align: right;">${chunk.content}</p>`;
+                        break;
+                    case 'center':
+                        htmlContent += `<p style="text-align: center;">${chunk.content}</p>`;
+                        break;
+                    case 'poem':
+                        const poemLines = chunk.content.split('\n').map((line: string, i: number) => 
+                            `<p style="margin: 0; ${i % 2 === 1 ? 'text-indent: 2em;' : ''}">${line}</p>`
+                        ).join('');
+                        htmlContent += `<div class="poem" style="margin: 1rem 0;">${poemLines}</div>`;
+                        break;
+                    case 'poem2':
+                        const poem2Lines = chunk.content.split('\n').map((line: string) => 
+                            `<p style="margin: 0; text-indent: 2em;">${line}</p>`
+                        ).join('');
+                        htmlContent += `<div class="poem2" style="margin: 1rem 0;">${poem2Lines}</div>`;
+                        break;
+                    case 'markdown':
+                        htmlContent += markdownToHtml(chunk.content);
+                        break;
+                }
+            });
+            
+            return [{
+                id: pageIndex === 0 ? `chapter-${chapterIndex + 1}` : `chapter-${chapterIndex + 1}-part-${pageIndex + 1}`,
+                href: pageIndex === 0 ? `chapter-${chapterIndex + 1}.xhtml` : `chapter-${chapterIndex + 1}-part-${pageIndex + 1}.xhtml`,
+                title: pageIndex === 0 ? chapter.title : `${chapter.title} (continued)`,
+                content: htmlContent,
+                showTitle: showTitle
+            }];
+        }).flat();
     };
 
     const chapterFiles = chapters.flatMap((chapter, i) => {
