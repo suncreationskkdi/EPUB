@@ -86,7 +86,7 @@ const parseContentToChunks = (content: string): ContentChunk[] => {
 };
 
 const Preview: React.FC = () => {
-  const { title, author, publisher, contributors, coverImage, chapters } = useBookStore();
+  const { title, author, publisher, contributors, coverImage, chapters, colors, paragraphIndent } = useBookStore();
 
   return (
     <div className="flex-1 bg-gray-200 p-8 overflow-y-auto">
@@ -97,7 +97,7 @@ const Preview: React.FC = () => {
           </div>
         )}
         <div className="preview-page bg-white flex flex-col justify-center items-center text-center p-16">
-          <h1 className="font-serif text-5xl mb-4 text-black">{title}</h1>
+          <h1 className="font-serif text-5xl mb-4" style={{ color: colors.bookTitle }}>{title}</h1>
           <p className="font-serif text-2xl text-gray-700">{author}</p>
           {publisher && <p className="text-gray-500 mt-16">{publisher}</p>}
           {contributors.length > 0 && (
@@ -147,7 +147,7 @@ const Preview: React.FC = () => {
                         components={{
                           h2: ({node, ...props}) => <h2 className="text-3xl font-bold mt-6 mb-4 font-serif" {...props} />,
                           h3: ({node, ...props}) => <h3 className="text-2xl font-bold mt-4 mb-3 font-serif" {...props} />,
-                          p: ({node, ...props}) => <p className="my-4 leading-relaxed text-justify" {...props} />,
+                          p: ({node, ...props}) => <p className="my-4 leading-relaxed text-justify" style={{ color: colors.paragraph, textIndent: paragraphIndent ? '2em' : '0' }} {...props} />,
                           ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" {...props} />,
                           ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" {...props} />,
                           blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,

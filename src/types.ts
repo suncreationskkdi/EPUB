@@ -12,4 +12,10 @@ export interface BookDetails {
   coverImage: string | null;
   ebookUrl: string;
   license: string;
+  colors: {
+    bookTitle: string;
+    chapterTitle: string;
+    paragraph: string;
+  };
+  paragraphIndent: boolean;
 }

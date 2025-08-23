@@ -17,6 +17,8 @@ const BookSettingsDialog: React.FC<BookSettingsDialogProps> = ({ isOpen, onClose
     contributors, 
     ebookUrl,
     license,
+    colors,
+    paragraphIndent,
     coverImage, 
     setBookDetails, 
     setCoverImage,
@@ -78,6 +80,75 @@ const BookSettingsDialog: React.FC<BookSettingsDialogProps> = ({ isOpen, onClose
               onChange={(e) => setBookDetails({ license: e.target.value })} 
               className="md:col-span-2" 
             />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-text mb-4">Typography Settings</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Book Title Color</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    value={colors.bookTitle}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, bookTitle: e.target.value } })}
+                    className="w-12 h-10 rounded border border-border bg-surface"
+                  />
+                  <Input
+                    value={colors.bookTitle}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, bookTitle: e.target.value } })}
+                    className="flex-1"
+                    placeholder="#000000"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Chapter Title Color</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    value={colors.chapterTitle}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, chapterTitle: e.target.value } })}
+                    className="w-12 h-10 rounded border border-border bg-surface"
+                  />
+                  <Input
+                    value={colors.chapterTitle}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, chapterTitle: e.target.value } })}
+                    className="flex-1"
+                    placeholder="#000000"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Paragraph Text Color</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    value={colors.paragraph}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, paragraph: e.target.value } })}
+                    className="w-12 h-10 rounded border border-border bg-surface"
+                  />
+                  <Input
+                    value={colors.paragraph}
+                    onChange={(e) => setBookDetails({ colors: { ...colors, paragraph: e.target.value } })}
+                    className="flex-1"
+                    placeholder="#000000"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="paragraphIndent"
+                checked={paragraphIndent}
+                onChange={(e) => setBookDetails({ paragraphIndent: e.target.checked })}
+                className="w-4 h-4 text-primary bg-surface border-border rounded focus:ring-primary focus:ring-2"
+              />
+              <label htmlFor="paragraphIndent" className="text-sm font-medium text-text-secondary">
+                Enable paragraph indentation (first line indent)
+              </label>
+            </div>
           </div>
 
           <div>

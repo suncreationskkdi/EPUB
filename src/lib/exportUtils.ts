@@ -277,7 +277,8 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       p { 
         margin: 1rem 0;
         text-align: justify;
-        color: black;
+        color: ${details.colors.paragraph};
+        text-indent: ${details.paragraphIndent ? '2em' : '0'};
       }
       p.align-right { text-align: right; }
       p.align-center { text-align: center; }
@@ -287,21 +288,21 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       }
       li { 
         margin: 0.5rem 0;
-        color: black;
+        color: ${details.colors.paragraph};
       }
       blockquote { 
         border-left: 4px solid #ccc; 
         padding-left: 1rem; 
         margin: 1rem 0; 
         font-style: italic;
-        color: black;
+        color: ${details.colors.paragraph};
       }
       code { 
         background: #f5f5f5; 
         padding: 0.2rem 0.4rem; 
         border-radius: 3px;
         font-family: monospace;
-        color: black;
+        color: ${details.colors.paragraph};
       }
       pre { 
         background: #f5f5f5; 
@@ -313,7 +314,7 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       pre code { 
         background: none; 
         padding: 0;
-        color: black;
+        color: ${details.colors.paragraph};
       }
       a { 
         color: #0066cc; 
@@ -321,12 +322,14 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       }
       div.poem p { 
         margin: 0.2rem 0;
+        color: ${details.colors.paragraph};
       }
       div.poem p:nth-child(2n) { 
         text-indent: 2em;
       }
       div.poem2 p { 
         text-indent: 2em;
+        color: ${details.colors.paragraph};
       }
       img {
         max-width: 100%;
@@ -391,7 +394,7 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
   </metadata>
   <manifest>${manifestItems}</manifest>
   <spine toc="ncx">${spineItems}</spine>
-</package>`);
+</package>`.replace(/\${details\.colors\.(bookTitle|chapterTitle|paragraph)}/g, (match, colorType) => details.colors[colorType as keyof typeof details.colors]).replace(/\${details\.paragraphIndent \? '2em' : '0'}/g, details.paragraphIndent ? '2em' : '0'));
 
     const navPoints = chapters.map((c, i) => 
       `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${c.title}</text></navLabel><content src="chapter-${i+1}.xhtml"/></navPoint>`

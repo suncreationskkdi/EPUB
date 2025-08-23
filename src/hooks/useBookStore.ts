@@ -34,6 +34,12 @@ export const useBookStore = create<BookState>((set, get) => ({
   coverImage: null,
   ebookUrl: '',
   license: 'All rights reserved.',
+  colors: {
+    bookTitle: '#000000',
+    chapterTitle: '#000000', 
+    paragraph: '#000000',
+  },
+  paragraphIndent: false,
 
   // Chapter details
   chapters: [initialChapter],
