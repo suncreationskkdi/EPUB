@@ -121,7 +121,7 @@ const Preview: React.FC = () => {
             const pages: ContentChunk[][] = [];
             let currentPage: ContentChunk[] = [];
             let currentPageHeight = 0;
-            const maxPageHeight = 250; // Approximate lines per page
+            const maxPageHeight = 35; // More conservative lines per page to prevent overflow
             
             chunks.forEach(chunk => {
               let chunkHeight = 0;
@@ -129,29 +129,55 @@ const Preview: React.FC = () => {
               // Estimate height based on content type and length
               switch (chunk.type) {
                 case 'title':
-                  chunkHeight = 8; // Large heading takes more space
+                  chunkHeight = 4; // Large heading takes more space
                   break;
                 case 'markdown':
-                  // Count paragraphs and estimate lines
-                  const paragraphs = chunk.content.split('\n\n').filter(p => p.trim());
+                  // More accurate line estimation
+                  const text = chunk.content.replace(/[#*`]/g, ''); // Remove markdown chars
+                  const paragraphs = text.split('\n\n').filter(p => p.trim());
                   chunkHeight = paragraphs.reduce((acc, p) => {
-                    const lines = Math.ceil(p.length / 80); // ~80 chars per line
-                    return acc + Math.max(lines, 1) + 1; // +1 for paragraph spacing
+                    const lines = Math.ceil(p.length / 60); // ~60 chars per line (more conservative)
+                    return acc + Math.max(lines, 1) + 2; // +2 for paragraph spacing
                   }, 0);
+                  
+                  // Add extra height for special markdown elements
+                  if (chunk.content.includes('```')) chunkHeight += 3; // Code blocks
+                  if (chunk.content.includes('> ')) chunkHeight += 1; // Blockquotes
+                  if (chunk.content.includes('- ') || chunk.content.includes('1. ')) chunkHeight += 2; // Lists
                   break;
                 case 'poem':
                 case 'poem2':
-                  chunkHeight = chunk.content.split('\n').length + 2;
+                  chunkHeight = chunk.content.split('\n').length + 3;
                   break;
                 default:
-                  chunkHeight = Math.ceil(chunk.content.length / 80) + 1;
+                  chunkHeight = Math.ceil(chunk.content.length / 60) + 2;
               }
               
-              // If adding this chunk would exceed page height, start new page
-              if (currentPageHeight + chunkHeight > maxPageHeight && currentPage.length > 0) {
-                pages.push([...currentPage]);
-                currentPage = [chunk];
-                currentPageHeight = chunkHeight;
+              // If adding this chunk would exceed page height or chunk is very large, start new page
+              if ((currentPageHeight + chunkHeight > maxPageHeight && currentPage.length > 0) || chunkHeight > maxPageHeight) {
+                // If current page has content, save it
+                if (currentPage.length > 0) {
+                  pages.push([...currentPage]);
+                }
+                
+                // If chunk is too large, split it further
+                if (chunkHeight > maxPageHeight && chunk.type === 'markdown') {
+                  const splitChunk = splitLargeMarkdownChunk(chunk, maxPageHeight);
+                  splitChunk.forEach((subChunk, index) => {
+                    if (index === 0) {
+                      currentPage = [subChunk];
+                    } else {
+                      pages.push([subChunk]);
+                    }
+                  });
+                  if (splitChunk.length > 0) {
+                    currentPage = [splitChunk[splitChunk.length - 1]];
+                  }
+                  currentPageHeight = Math.ceil(currentPage[0]?.content.length / 60) || 0;
+                } else {
+                  currentPage = [chunk];
+                  currentPageHeight = chunkHeight;
+                }
               } else {
                 currentPage.push(chunk);
                 currentPageHeight += chunkHeight;
@@ -164,6 +190,36 @@ const Preview: React.FC = () => {
             }
             
             return pages.length > 0 ? pages : [chunks]; // Fallback to single page
+          };
+          
+          // Helper function to split large markdown chunks
+          const splitLargeMarkdownChunk = (chunk: ContentChunk, maxHeight: number): ContentChunk[] => {
+            const paragraphs = chunk.content.split('\n\n').filter(p => p.trim());
+            const chunks: ContentChunk[] = [];
+            let currentContent = '';
+            let currentHeight = 0;
+            
+            paragraphs.forEach(paragraph => {
+              const paragraphHeight = Math.ceil(paragraph.length / 60) + 2;
+              
+              if (currentHeight + paragraphHeight > maxHeight && currentContent.trim()) {
+                chunks.push({ type: 'markdown', content: currentContent.trim() });
+                currentContent = paragraph;
+                currentHeight = paragraphHeight;
+              } else {
+                currentContent += (currentContent ? '\n\n' : '') + paragraph;
+                currentPageHeight += chunkHeight;
+                currentHeight += paragraphHeight;
+                pages.push([...currentPage]);
+                currentPage = [chunk];
+                currentPageHeight = chunkHeight;
+            });
+            
+            if (currentContent.trim()) {
+              chunks.push({ type: 'markdown', content: currentContent.trim() });
+            }
+            
+            return chunks.length > 0 ? chunks : [chunk];
           };
           
           const pages = splitIntoPages(chunks);
