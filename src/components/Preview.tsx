@@ -7,14 +7,17 @@ const Preview: React.FC = () => {
   const { title, author, publisher, contributors, coverImage, chapters, colors, paragraphIndent, chapterAlignment, ebookUrl, license } = useBookStore();
 
   return (
-    <div className="flex-1 bg-gray-200 p-8 overflow-y-auto">
-      <div id="preview-content" className="shadow-lg">
+    <div className="flex-1 bg-gray-200 p-4 overflow-y-auto">
+      <div id="preview-content" className="max-w-4xl mx-auto">
+        {/* Cover Page */}
         {coverImage && (
-          <div className="preview-page bg-white">
+          <div className="bg-white p-8 mb-8 shadow-lg rounded">
             <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
           </div>
         )}
-        <div className="preview-page bg-white flex flex-col justify-center items-center text-center p-16">
+        
+        {/* Title Page */}
+        <div className="bg-white p-16 mb-8 shadow-lg rounded flex flex-col justify-center items-center text-center">
           <h1 className="font-serif text-5xl mb-4" style={{ color: colors.bookTitle }}>{title}</h1>
           <p className="font-serif text-2xl text-gray-700">{author}</p>
           {publisher && <p className="text-gray-500 mt-8">{publisher}</p>}
@@ -31,8 +34,8 @@ const Preview: React.FC = () => {
           <p className="text-gray-500 mt-4">{license}</p>
         </div>
         
-        {/* Continuous content preview */}
-        <div className="bg-white text-black font-serif p-8 max-w-4xl mx-auto" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+        {/* Continuous Content */}
+        <div className="bg-white text-black font-serif p-8 shadow-lg rounded" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
           {chapters.map((chapter) => (
             <div key={chapter.id} className="mb-12">
               <h1 className={`text-4xl font-bold mb-8 font-serif text-${chapterAlignment}`} style={{ color: colors.chapterTitle }}>
@@ -65,15 +68,19 @@ const Preview: React.FC = () => {
                       <pre className="bg-gray-100 p-4 rounded my-4 overflow-x-auto" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}><code {...props} /></pre>,
                 }}
               >
-                {chapter.content.replace(/^# .*\n?/, '').replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
+                {chapter.content
+                  .replace(/^# .*\n?/, '')
+                  .replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
                   const lines = content.split('\n').map((line: string, index: number) => 
                     index % 2 === 1 ? `    ${line}` : line
                   ).join('\n');
                   return `\n${lines}\n`;
-                }).replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
+                  })
+                  .replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
                   const lines = content.split('\n').map((line: string) => `    ${line}`).join('\n');
                   return `\n${lines}\n`;
-                })}
+                  })
+                }
               </ReactMarkdown>
             </div>
           ))}
