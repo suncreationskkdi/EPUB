@@ -1,4 +1,5 @@
-import PDFDocument from 'pdfkit';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { BookDetails, Chapter } from '../types';
@@ -443,14 +444,164 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
 };
 
 export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]) => {
-  try {
-    const pdfBuffer = await createPDFBuffer(details, chapters);
-    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
-    saveAs(blob, `${details.title || 'ebook'}-small.pdf`);
-  } catch (error) {
-    console.error('Error generating small PDF:', error);
-    alert('Error generating small PDF. Please try again.');
+  const pdf = new jsPDF('p', 'mm', [203.2, 152.4]);
+  const pageWidth = 203.2;
+  const pageHeight = 152.4;
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+  const contentHeight = pageHeight - (margin * 2);
+  
+  let currentY = margin;
+  let pageNumber = 1;
+  
+  // Helper function to add page number
+  const addPageNumber = (pageNum: number) => {
+    if (pageNum > 1) { // Don't add page number to cover
+      pdf.setFontSize(10);
+      pdf.setTextColor(102, 102, 102);
+      pdf.text(pageNum.toString(), pageWidth - margin, pageHeight - 10);
+    }
+  };
+  
+  // Helper function to check if we need a new page
+  const checkNewPage = (requiredHeight: number) => {
+    if (currentY + requiredHeight > pageHeight - margin) {
+      addPageNumber(pageNumber);
+      pdf.addPage();
+      pageNumber++;
+      currentY = margin;
+    }
+  };
+  
+  // Cover page
+  if (details.coverImage) {
+    try {
+      pdf.addImage(details.coverImage, 'JPEG', 0, 0, pageWidth, pageHeight);
+      addPageNumber(pageNumber);
+      pdf.addPage();
+      pageNumber++;
+      currentY = margin;
+    } catch (error) {
+      console.warn('Could not add cover image:', error);
+    }
   }
+  
+  // Title page
+  pdf.setFontSize(18);
+  pdf.setTextColor(0, 0, 0);
+  const titleLines = wrapText(pdf, details.title, contentWidth);
+  titleLines.forEach(line => {
+    checkNewPage(10);
+    pdf.text(line, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 10;
+  });
+  
+  currentY += 8;
+  pdf.setFontSize(12);
+  pdf.text(`By ${details.author}`, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 15;
+  
+  if (details.publisher) {
+    pdf.setFontSize(10);
+    pdf.text(details.publisher, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
+  }
+  
+  if (details.ebookUrl) {
+    pdf.text(details.ebookUrl, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
+  }
+  
+  if (details.contributors.length > 0) {
+    currentY += 8;
+    details.contributors.forEach(contributor => {
+      checkNewPage(6);
+      pdf.text(contributor, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+    });
+  }
+  
+  currentY += 8;
+  pdf.text(details.license, pageWidth / 2, currentY, { align: 'center' });
+  
+  addPageNumber(pageNumber);
+  pdf.addPage();
+  pageNumber++;
+  currentY = margin;
+  
+  // Process chapters
+  chapters.forEach((chapter) => {
+    // Chapter title
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    checkNewPage(12);
+    
+    const chapterTitleLines = wrapText(pdf, chapter.title, contentWidth);
+    chapterTitleLines.forEach(line => {
+      const alignment = details.chapterAlignment === 'center' ? 'center' : 
+                       details.chapterAlignment === 'right' ? 'right' : 'left';
+      const x = alignment === 'center' ? pageWidth / 2 : 
+               alignment === 'right' ? pageWidth - margin : margin;
+      
+      pdf.text(line, x, currentY, { align: alignment });
+      currentY += 12;
+    });
+    
+    currentY += 8;
+    
+    // Chapter content
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const htmlContent = markdownToHtml(contentWithoutTitle);
+    const plainText = htmlToPlainText(htmlContent);
+    
+    // Split into paragraphs
+    const paragraphs = plainText.split('\n\n').filter(p => p.trim());
+    
+    paragraphs.forEach(paragraph => {
+      if (!paragraph.trim()) return;
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Handle special formatting
+      let indent = 0;
+      let alignment: 'left' | 'center' | 'right' = 'left';
+      
+      if (paragraph.startsWith('    ')) {
+        indent = 15; // Poem indentation
+        paragraph = paragraph.substring(4);
+      } else if (paragraph.match(/^\s{20,}/)) {
+        alignment = 'center';
+        paragraph = paragraph.trim();
+      } else if (paragraph.match(/^\s{30,}/)) {
+        alignment = 'right';
+        paragraph = paragraph.trim();
+      }
+      
+      const lines = wrapText(pdf, paragraph, contentWidth - indent);
+      const paragraphHeight = lines.length * 5 + 6;
+      
+      checkNewPage(paragraphHeight);
+      
+      lines.forEach((line, index) => {
+        const x = alignment === 'center' ? pageWidth / 2 : 
+                 alignment === 'right' ? pageWidth - margin : 
+                 margin + indent + (details.paragraphIndent && index === 0 ? 8 : 0);
+        
+        pdf.text(line, x, currentY, { align: alignment });
+        currentY += 5;
+      });
+      
+      currentY += 6; // Space between paragraphs
+    });
+    
+    currentY += 8; // Space between chapters
+  });
+  
+  // Add page number to last page
+  addPageNumber(pageNumber);
+  
+  pdf.save(`${details.title || 'ebook'}-small.pdf`);
 };
 
 export const exportToHTML = (details: BookDetails, chapters: Chapter[]) => {
