@@ -244,35 +244,26 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   // Helper function to split content into pages
   const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
     const htmlContent = markdownToHtml(content);
-    const maxContentLength = 1500; // Further reduced to prevent cutoff
+    const maxContentLength = 3000; // Approximate characters per page
     
     if (htmlContent.length <= maxContentLength) {
       return [htmlContent];
     }
     
-    // Split by paragraphs more carefully
-    const paragraphs = htmlContent.split(/<\/p>|<\/h[1-6]>|<\/div>|<\/blockquote>|<\/pre>/).filter(p => p.trim());
+    // Split by paragraphs and group them into pages
+    const paragraphs = htmlContent.split('</p>').filter(p => p.trim());
     const pages: string[] = [];
     let currentPage = '';
+    let isFirstPage = true;
     
     paragraphs.forEach((paragraph, index) => {
-      // Reconstruct the closing tag
-      let closingTag = '';
-      if (paragraph.includes('<p')) closingTag = '</p>';
-      else if (paragraph.includes('<h1')) closingTag = '</h1>';
-      else if (paragraph.includes('<h2')) closingTag = '</h2>';
-      else if (paragraph.includes('<h3')) closingTag = '</h3>';
-      else if (paragraph.includes('<div')) closingTag = '</div>';
-      else if (paragraph.includes('<blockquote')) closingTag = '</blockquote>';
-      else if (paragraph.includes('<pre')) closingTag = '</pre>';
-      else closingTag = '</p>';
-      
-      const fullParagraph = paragraph + closingTag;
+      const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
       
       // If adding this paragraph would exceed the limit, start a new page
       if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 0) {
         pages.push(currentPage);
         currentPage = fullParagraph;
+        isFirstPage = false;
       } else {
         currentPage += fullParagraph;
       }
@@ -293,7 +284,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     return contentPages.map((pageContent, pageIndex) => {
       const showTitle = pageIndex === 0; // Only show title on first page of chapter
       return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-        <div class="chapter-content" style="padding: 2rem; height: calc(100% - 4rem); overflow: hidden;">
+        <div class="chapter-content" style="padding: 2rem;">
           ${showTitle ? `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>` : ''}
           ${pageContent}
         </div>
@@ -319,7 +310,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .page { 
           width: 210mm; 
           height: 297mm; 
-          padding: 15mm 16mm 25mm 16mm; 
+          padding: 16mm; 
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
@@ -329,86 +320,50 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          position: relative;
         }
         .chapter-content {
-          flex: 1 1 auto;
+          flex: 1;
           overflow: hidden;
-          max-height: calc(297mm - 40mm);
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          word-wrap: break-word;
-          overflow-wrap: break-word;
         }
-        .chapter-content h1,
-        .chapter-content h2,
-        .chapter-content h3,
-        .chapter-content p,
-        .chapter-content div,
-        .chapter-content ul,
-        .chapter-content ol,
-        .chapter-content blockquote,
-        .chapter-content pre {
+        .chapter-content > * {
           page-break-inside: avoid;
-          break-inside: avoid;
-          orphans: 3;
-          widows: 3;
         }
         .chapter-content p {
-          orphans: 3;
-          widows: 3;
+          orphans: 2;
+          widows: 2;
           word-wrap: break-word;
           overflow-wrap: break-word;
-          margin: 0.6rem 0;
-          line-height: 1.4;
-          page-break-inside: avoid;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
           color: ${details.colors.chapterTitle};
           text-align: ${details.chapterAlignment};
           page-break-after: avoid;
-          break-after: avoid;
-          orphans: 3;
-          widows: 3;
         }
-        h1 { font-size: 2.5rem; margin-bottom: 1.2rem; page-break-inside: avoid; }
-        h2 { font-size: 2rem; margin: 1.2rem 0 0.8rem 0; page-break-inside: avoid; }
-        h3 { font-size: 1.5rem; margin: 0.8rem 0 0.4rem 0; page-break-inside: avoid; }
+        h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
+        h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
+        h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
         p { 
-          margin: 0.6rem 0; 
-          line-height: 1.4;
+          margin: 1rem 0; 
+          line-height: 1.6;
           text-align: justify;
           color: ${details.colors.paragraph};
           text-indent: ${details.paragraphIndent ? '2em' : '0'};
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          page-break-inside: avoid;
-          orphans: 3;
-          widows: 3;
         }
         ul, ol { 
-          margin: 0.6rem 0; 
+          margin: 1rem 0; 
           padding-left: 2rem;
-          page-break-inside: avoid;
         }
         li { 
-          margin: 0.3rem 0;
+          margin: 0.5rem 0;
           color: ${details.colors.paragraph};
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          page-break-inside: avoid;
         }
         blockquote { 
           border-left: 4px solid #ccc; 
           padding-left: 1rem; 
-          margin: 0.6rem 0; 
+          margin: 1rem 0; 
           font-style: italic;
           color: ${details.colors.paragraph};
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          page-break-inside: avoid;
         }
         code { 
           background: #f5f5f5; 
@@ -422,10 +377,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           padding: 1rem; 
           border-radius: 5px; 
           overflow-x: auto;
-          margin: 0.6rem 0;
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          page-break-inside: avoid;
+          margin: 1rem 0;
         }
         pre code { 
           background: none; 
@@ -435,14 +387,10 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         a { 
           color: #0066cc; 
           text-decoration: underline;
-          word-wrap: break-word;
-          overflow-wrap: break-word;
         }
         .poem p { 
-          margin: 0.1rem 0;
+          margin: 0.2rem 0;
           color: ${details.colors.paragraph};
-          word-wrap: break-word;
-          overflow-wrap: break-word;
         }
         .poem p:nth-child(2n) { 
           text-indent: 2em;
@@ -450,19 +398,11 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .poem2 p { 
           text-indent: 2em;
           color: ${details.colors.paragraph};
-          word-wrap: break-word;
-          overflow-wrap: break-word;
         }
         @media print {
           .page {
             box-shadow: none;
             margin: 0;
-            page-break-after: always;
-          }
-          .chapter-content > * {
-            page-break-inside: avoid;
-            orphans: 3;
-            widows: 3;
           }
         }
       </style>
