@@ -86,7 +86,7 @@ const parseContentToChunks = (content: string): ContentChunk[] => {
 };
 
 const Preview: React.FC = () => {
-  const { title, author, publisher, contributors, coverImage, chapters, colors, paragraphIndent, chapterAlignment } = useBookStore();
+  const { title, author, publisher, contributors, coverImage, chapters, colors, paragraphIndent, chapterAlignment, ebookUrl, license } = useBookStore();
 
   return (
     <div className="flex-1 bg-gray-200 p-8 overflow-y-auto">
