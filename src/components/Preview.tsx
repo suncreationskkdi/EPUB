@@ -116,7 +116,8 @@ const Preview: React.FC = () => {
           const contentWithTitle = `# ${chapter.title}\n${chapter.content.replace(/^# .*\n?/, '')}`;
           const chunks = parseContentToChunks(contentWithTitle);
           return (
-            <div key={chapter.id} className="preview-page bg-white p-16 text-black font-serif">
+            <div key={chapter.id} className="preview-page bg-white text-black font-serif">
+              <div className="chapter-content">
               {chunks.map((chunk, index) => {
                 switch (chunk.type) {
                   case 'title':
@@ -169,6 +170,7 @@ const Preview: React.FC = () => {
                     return null;
                 }
               })}
+              </div>
             </div>
           );
         })}
@@ -180,12 +182,27 @@ const Preview: React.FC = () => {
           margin: 0 auto 2rem auto;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
           page-break-before: always;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
         }
         .preview-page .poem p:nth-child(2n) {
           text-indent: 2em;
         }
         .poem2 p {
           text-indent: 2em;
+        }
+        .chapter-content {
+          flex: 1;
+          overflow: hidden;
+          padding: 16px;
+        }
+        .chapter-content > * {
+          page-break-inside: avoid;
+        }
+        .chapter-content p {
+          orphans: 2;
+          widows: 2;
         }
       `}</style>
     </div>

@@ -162,9 +162,11 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
     const htmlContent = markdownToHtml(contentWithoutTitle);
     
-    return `<div class="page" style="padding: 2rem; color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-      <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
-      ${htmlContent}
+    return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+      <div class="chapter-content" style="padding: 2rem;">
+        <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
+        ${htmlContent}
+      </div>
     </div>`;
   }).join('');
 
@@ -186,18 +188,35 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .page { 
           width: 210mm; 
           height: 297mm; 
-          padding: 20mm; 
+          padding: 16mm; 
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
           color: black;
           margin: 0 auto 2rem auto;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .chapter-content {
+          flex: 1;
+          overflow: hidden;
+        }
+        .chapter-content > * {
+          page-break-inside: avoid;
+        }
+        .chapter-content p {
+          orphans: 2;
+          widows: 2;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
           color: ${details.colors.chapterTitle};
           text-align: ${details.chapterAlignment};
+          page-break-after: avoid;
         }
         h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
         h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -351,11 +370,14 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         color: ${details.colors.paragraph};
         margin: 0;
         padding: 1rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
       h1, h2, h3 { 
         font-family: 'Noto Serif', serif;
         color: ${details.colors.chapterTitle};
         text-align: ${details.chapterAlignment};
+        page-break-after: avoid;
       }
       h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
       h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -365,6 +387,10 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         text-align: justify;
         color: ${details.colors.paragraph};
         text-indent: ${details.paragraphIndent ? '2em' : '0'};
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        orphans: 2;
+        widows: 2;
       }
       p.align-right { text-align: right; }
       p.align-center { text-align: center; }
@@ -445,7 +471,14 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         oebps?.file(`chapter-${i + 1}.xhtml`, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-<head><title>${chapter.title}</title><link href="style.css" rel="stylesheet" type="text/css"/></head>
+<head>
+  <title>${chapter.title}</title>
+  <link href="style.css" rel="stylesheet" type="text/css"/>
+  <style>
+    body { word-wrap: break-word; overflow-wrap: break-word; }
+    p { orphans: 2; widows: 2; }
+  </style>
+</head>
 <body>
   <h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapter.title}</h1>
   ${htmlContent}
