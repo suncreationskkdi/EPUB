@@ -174,13 +174,25 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     return pages;
   };
 
-  const chapterPages = chapters.flatMap(chapter => splitChapterIntoPages(chapter)).join('');
+  // Generate all chapter pages with continuous numbering
+  let pageNumber = 3; // Start from page 3 (after cover and details)
+  const allChapterPages: string[] = [];
+  
+  chapters.forEach(chapter => {
+    const chapterPages = splitChapterIntoPages(chapter);
+    chapterPages.forEach(pageContent => {
+      // Add page number to each page
+      const pageWithNumber = pageContent.replace(
+        '</div>',
+        `<div class="page-number" style="position: absolute; bottom: 15mm; right: 25mm; font-family: 'Noto Sans', sans-serif; font-size: 12px; color: #666;">${pageNumber}</div></div>`
+      );
+      allChapterPages.push(pageWithNumber);
+      pageNumber++;
+    });
+  });
+  
+  const chapterPages = allChapterPages.join('');
    
-   // Calculate total pages for numbering
-   let totalPages = 2; // Cover + Details pages
-   chapters.forEach(chapter => {
-     totalPages += splitChapterIntoPages(chapter).length;
-   });
 
   return `
     <!DOCTYPE html>
