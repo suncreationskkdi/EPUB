@@ -459,6 +459,231 @@ export const exportToHTML = (details: BookDetails, chapters: Chapter[]) => {
     saveAs(blob, `${details.title || 'ebook'}.html`);
 };
 
+export const exportToHTMLSinglePage = (details: BookDetails, chapters: Chapter[]) => {
+  const { title, author, publisher, contributors, ebookUrl, license, colors, paragraphIndent, chapterAlignment, coverImage } = details;
+  
+  const coverSection = coverImage ? 
+    `<div class="cover-section">
+      <img src="${coverImage}" alt="Cover" class="cover-image" />
+    </div>` : '';
+  
+  const detailsSection = `<div class="title-section">
+    <h1 class="book-title">${title}</h1>
+    <p class="author">By ${author}</p>
+    ${publisher ? `<p class="publisher">${publisher}</p>` : ''}
+    ${ebookUrl ? `<p class="ebook-url">${ebookUrl}</p>` : ''}
+    ${contributors.length > 0 ? `<div class="contributors">${contributors.map(contributor => 
+      `<p class="contributor">${contributor}</p>`
+    ).join('')}</div>` : ''}
+    <p class="license">${license}</p>
+  </div>`;
+
+  const chaptersContent = chapters.map(chapter => {
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const htmlContent = markdownToHtml(contentWithoutTitle);
+    
+    return `<div class="chapter">
+      <h1 class="chapter-title">${chapter.title}</h1>
+      ${htmlContent}
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
+    
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      color: ${colors.paragraph};
+      margin: 0;
+      padding: 0;
+      background: white;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .cover-section {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem 0;
+      border-bottom: 2px solid #eee;
+    }
+    
+    .cover-image {
+      max-width: 400px;
+      max-height: 600px;
+      width: auto;
+      height: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    
+    .title-section {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem 0;
+      border-bottom: 2px solid #eee;
+    }
+    
+    .book-title {
+      font-family: 'Noto Serif', serif;
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: ${colors.bookTitle};
+      font-weight: bold;
+    }
+    
+    .author {
+      font-family: 'Noto Serif', serif;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+      color: ${colors.paragraph};
+    }
+    
+    .publisher, .ebook-url, .contributor, .license {
+      font-size: 1rem;
+      margin: 0.5rem 0;
+      color: ${colors.paragraph};
+    }
+    
+    .contributors {
+      margin: 1rem 0;
+    }
+    
+    .chapter {
+      margin-bottom: 3rem;
+    }
+    
+    .chapter-title {
+      font-family: 'Noto Serif', serif;
+      font-size: 2.5rem;
+      margin: 2rem 0 1.5rem 0;
+      color: ${colors.chapterTitle};
+      text-align: ${chapterAlignment};
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.5rem;
+    }
+    
+    h2, h3 {
+      font-family: 'Noto Serif', serif;
+      color: ${colors.chapterTitle};
+      text-align: ${chapterAlignment};
+    }
+    
+    h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
+    h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
+    
+    p {
+      margin: 1rem 0;
+      line-height: 1.6;
+      text-align: justify;
+      color: ${colors.paragraph};
+      text-indent: ${paragraphIndent ? '2em' : '0'};
+    }
+    
+    p.align-right { text-align: right; }
+    p.align-center { text-align: center; }
+    
+    ul, ol {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+    
+    li {
+      margin: 0.5rem 0;
+      color: ${colors.paragraph};
+    }
+    
+    blockquote {
+      border-left: 4px solid #ccc;
+      padding-left: 1rem;
+      margin: 1rem 0;
+      font-style: italic;
+      color: ${colors.paragraph};
+    }
+    
+    code {
+      background: #f5f5f5;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: monospace;
+      color: ${colors.paragraph};
+    }
+    
+    pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    
+    pre code {
+      background: none;
+      padding: 0;
+      color: ${colors.paragraph};
+    }
+    
+    a {
+      color: #0066cc;
+      text-decoration: underline;
+    }
+    
+    .poem p {
+      margin: 0.2rem 0;
+      color: ${colors.paragraph};
+    }
+    
+    .poem p:nth-child(2n) {
+      text-indent: 2em;
+    }
+    
+    .poem2 p {
+      text-indent: 2em;
+      color: ${colors.paragraph};
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+      margin: 1rem 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .book-title {
+        font-size: 2rem;
+      }
+      
+      .chapter-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${coverSection}
+  ${detailsSection}
+  ${chaptersContent}
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  saveAs(blob, `${title || 'ebook'}-single-page.html`);
+};
+
 export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) => {
     const zip = new JSZip();
     const { title, author, contributors, coverImage } = details;
