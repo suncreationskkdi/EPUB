@@ -287,8 +287,8 @@ const Preview: React.FC = () => {
       </div>
       <style>{`
         .preview-page {
-          width: 210mm;
-          height: 297mm;
+          width: 180mm;
+          height: 250mm;
           margin: 0 auto 2rem auto;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
           page-break-before: always;
@@ -305,7 +305,9 @@ const Preview: React.FC = () => {
         .chapter-content {
           flex: 1;
           overflow: hidden;
-          padding: 16px;
+          padding: 20mm;
+          padding-top: 15mm;
+          padding-bottom: 15mm;
         }
         .chapter-content > * {
           page-break-inside: avoid;

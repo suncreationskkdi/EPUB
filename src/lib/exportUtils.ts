@@ -244,7 +244,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   // Helper function to split content into pages
   const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
     const htmlContent = markdownToHtml(content);
-    const maxContentLength = 3000; // Approximate characters per page
+    const maxContentLength = 2500; // More conservative characters per page
     
     if (htmlContent.length <= maxContentLength) {
       return [htmlContent];
@@ -259,8 +259,8 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     paragraphs.forEach((paragraph, index) => {
       const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
       
-      // If adding this paragraph would exceed the limit, start a new page
-      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 0) {
+      // If adding this paragraph would exceed the limit and we have content, start a new page
+      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 500) {
         pages.push(currentPage);
         currentPage = fullParagraph;
         isFirstPage = false;
@@ -310,7 +310,9 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .page { 
           width: 210mm; 
           height: 297mm; 
-          padding: 16mm; 
+          padding: 20mm; 
+          padding-top: 15mm;
+          padding-bottom: 15mm;
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
@@ -323,7 +325,8 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         }
         .chapter-content {
           flex: 1;
-          overflow: hidden;
+          overflow: visible;
+          max-height: calc(297mm - 30mm);
         }
         .chapter-content > * {
           page-break-inside: avoid;
