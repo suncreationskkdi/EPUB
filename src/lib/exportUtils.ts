@@ -423,12 +423,14 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const canvas = await html2canvas(page, { 
-      scale: 2, 
+      scale: 1.2, 
       backgroundColor: '#ffffff',
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
+      logging: false,
+      removeContainer: true
     });
-    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+    const imgData = canvas.toDataURL('image/jpeg', 0.7);
     
     if (i > 0) {
       pdf.addPage();
@@ -473,12 +475,14 @@ export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const canvas = await html2canvas(page, { 
-      scale: 1.5, 
+      scale: 1.2, 
       backgroundColor: '#ffffff',
       useCORS: true,
-      allowTaint: true
+      allowTaint: true,
+      logging: false,
+      removeContainer: true
     });
-    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+    const imgData = canvas.toDataURL('image/jpeg', 0.7);
     
     if (i > 0) {
       pdf.addPage();
