@@ -1,0 +1,28 @@
+import React from 'react';
+import { BookOpen, Download } from 'lucide-react';
+import Button from './ui/Button';
+import { useBookStore } from '../hooks/useBookStore';
+import { exportToPDF, exportToHTML, exportToEPUB } from '../lib/exportUtils';
+
+const Header: React.FC = () => {
+  const bookState = useBookStore();
+
+  return (
+    <header className="bg-surface h-16 flex items-center justify-between px-6 border-b border-border shadow-md">
+      <div className="flex items-center space-x-3">
+        <BookOpen className="text-primary" size={28} />
+        <h1 className="text-xl font-bold text-text">Epubify</h1>
+      </div>
+      <div className="flex items-center space-x-2">
+        <Button variant="secondary" onClick={() => exportToHTML(bookState, bookState.chapters)}>HTML</Button>
+        <Button variant="secondary" onClick={() => exportToEPUB(bookState, bookState.chapters)}>EPUB</Button>
+        <Button variant="primary" onClick={() => exportToPDF(bookState, bookState.chapters)}>
+          <Download size={16} className="mr-2" />
+          Export PDF
+        </Button>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
