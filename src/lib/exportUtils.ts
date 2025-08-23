@@ -4,26 +4,106 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { BookDetails, Chapter } from '../types';
 
-const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string => {
-  const coverPage = details.coverImage ? `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
+// Helper function to convert markdown to HTML
+const markdownToHtml = (markdown: string): string => {
+  let html = markdown;
   
-  const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-    <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem;">${details.title}</h1>
-    <p style="font-family: 'Noto Serif', serif; font-size: 24px;">By ${details.author}</p>
-    ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 4rem;">Published by ${details.publisher}</p>` : ''}
-    ${details.contributor ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px;">Contribution by ${details.contributor}</p>` : ''}
+  // Handle headers
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  
+  // Handle bold and italic
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Handle code blocks
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  // Handle blockquotes
+  html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+  
+  // Handle unordered lists
+  html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  
+  // Handle ordered lists
+  html = html.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+  
+  // Handle links
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  
+  // Handle images
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />');
+  
+  // Handle custom formatting
+  html = html.replace(/^-r\s*(.*$)/gm, '<p style="text-align: right;">$1</p>');
+  html = html.replace(/^-c\s*(.*$)/gm, '<p style="text-align: center;">$1</p>');
+  
+  // Handle poem blocks
+  html = html.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
+    const lines = content.split('\n').map((line: string, index: number) => 
+      `<p style="margin: 0; ${index % 2 === 1 ? 'text-indent: 2em;' : ''}">${line}</p>`
+    ).join('');
+    return `<div class="poem" style="margin: 1rem 0;">${lines}</div>`;
+  });
+  
+  // Handle line breaks - convert double newlines to paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraphs if not already wrapped
+  if (!html.includes('<p>') && !html.includes('<h1>') && !html.includes('<h2>') && !html.includes('<h3>')) {
+    html = `<p>${html}</p>`;
+  } else if (!html.startsWith('<')) {
+    html = `<p>${html}`;
+  }
+  if (!html.endsWith('</p>') && !html.endsWith('>')) {
+    html = `${html}</p>`;
+  }
+  
+  return html;
+};
+
+const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string => {
+  const coverPage = details.coverImage ? 
+    `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
+  
+  const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
+    <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: black;">${details.title}</h1>
+    <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;">By ${details.author}</p>
+    ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 4rem; color: black;">Published by ${details.publisher}</p>` : ''}
+    ${details.contributors.length > 0 ? details.contributors.map(contributor => 
+      `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; color: black;">${contributor}</p>`
+    ).join('') : ''}
   </div>`;
 
-  const chapterPages = chapters.map(chapter => `<div class="page">${chapter.content.replace(/# .*/, `<h1>${chapter.title}</h1>`)}</div>`).join('');
+  const chapterPages = chapters.map(chapter => {
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const htmlContent = markdownToHtml(contentWithoutTitle);
+    
+    return `<div class="page" style="padding: 2rem; color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+      <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: black;">${chapter.title}</h1>
+      ${htmlContent}
+    </div>`;
+  }).join('');
 
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
+      <title>${details.title}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
-        body { font-family: 'Noto Sans', sans-serif; margin: 0; padding: 0; }
+        body { 
+          font-family: 'Noto Sans', sans-serif; 
+          margin: 0; 
+          padding: 0; 
+          background: white;
+          color: black;
+        }
         .page { 
           width: 210mm; 
           height: 297mm; 
@@ -32,11 +112,71 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           page-break-after: always;
           background: white;
           color: black;
+          margin: 0 auto 2rem auto;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        h1, h2, h3 { font-family: 'Noto Serif', serif; }
-        p[style*="text-align: right"] { text-align: right; }
-        p[style*="text-align: center"] { text-align: center; }
-        .poem p:nth-child(2n) { text-indent: 2em; }
+        h1, h2, h3 { 
+          font-family: 'Noto Serif', serif; 
+          color: black;
+        }
+        h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
+        h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
+        h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
+        p { 
+          margin: 1rem 0; 
+          line-height: 1.6;
+          color: black;
+        }
+        ul, ol { 
+          margin: 1rem 0; 
+          padding-left: 2rem;
+        }
+        li { 
+          margin: 0.5rem 0;
+          color: black;
+        }
+        blockquote { 
+          border-left: 4px solid #ccc; 
+          padding-left: 1rem; 
+          margin: 1rem 0; 
+          font-style: italic;
+          color: black;
+        }
+        code { 
+          background: #f5f5f5; 
+          padding: 0.2rem 0.4rem; 
+          border-radius: 3px;
+          font-family: monospace;
+          color: black;
+        }
+        pre { 
+          background: #f5f5f5; 
+          padding: 1rem; 
+          border-radius: 5px; 
+          overflow-x: auto;
+          margin: 1rem 0;
+        }
+        pre code { 
+          background: none; 
+          padding: 0;
+          color: black;
+        }
+        a { 
+          color: #0066cc; 
+          text-decoration: underline;
+        }
+        .poem p { 
+          margin: 0.2rem 0;
+        }
+        .poem p:nth-child(2n) { 
+          text-indent: 2em;
+        }
+        @media print {
+          .page {
+            box-shadow: none;
+            margin: 0;
+          }
+        }
       </style>
     </head>
     <body>
@@ -78,7 +218,7 @@ export const exportToHTML = (details: BookDetails, chapters: Chapter[]) => {
 
 export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) => {
     const zip = new JSZip();
-    const { title, author, contributor, coverImage } = details;
+    const { title, author, contributors, coverImage } = details;
 
     zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
 
@@ -94,11 +234,75 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
     
     // CSS
     oebps?.file('style.css', `
-      body { font-family: sans-serif; }
-      h1, h2, h3 { font-family: serif; }
+      body { 
+        font-family: 'Noto Sans', sans-serif; 
+        line-height: 1.6;
+        color: black;
+        margin: 0;
+        padding: 1rem;
+      }
+      h1, h2, h3 { 
+        font-family: 'Noto Serif', serif;
+        color: black;
+      }
+      h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
+      h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
+      h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
+      p { 
+        margin: 1rem 0;
+        color: black;
+      }
       p.align-right { text-align: right; }
       p.align-center { text-align: center; }
-      div.poem p:nth-child(2n) { text-indent: 2em; }
+      ul, ol { 
+        margin: 1rem 0; 
+        padding-left: 2rem;
+      }
+      li { 
+        margin: 0.5rem 0;
+        color: black;
+      }
+      blockquote { 
+        border-left: 4px solid #ccc; 
+        padding-left: 1rem; 
+        margin: 1rem 0; 
+        font-style: italic;
+        color: black;
+      }
+      code { 
+        background: #f5f5f5; 
+        padding: 0.2rem 0.4rem; 
+        border-radius: 3px;
+        font-family: monospace;
+        color: black;
+      }
+      pre { 
+        background: #f5f5f5; 
+        padding: 1rem; 
+        border-radius: 5px; 
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+      pre code { 
+        background: none; 
+        padding: 0;
+        color: black;
+      }
+      a { 
+        color: #0066cc; 
+        text-decoration: underline;
+      }
+      div.poem p { 
+        margin: 0.2rem 0;
+      }
+      div.poem p:nth-child(2n) { 
+        text-indent: 2em;
+      }
+      img {
+        max-width: 100%;
+        height: auto;
+        margin: 1rem 0;
+      }
     `);
 
     // Content
@@ -116,12 +320,17 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
     }
 
     const chapterFiles = chapters.map((chapter, i) => {
-        const content = chapter.content.replace(/# .*/, `<h1>${chapter.title}</h1>`);
+        const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+        const htmlContent = markdownToHtml(contentWithoutTitle);
+        
         oebps?.file(`chapter-${i + 1}.xhtml`, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>${chapter.title}</title><link href="style.css" rel="stylesheet" type="text/css"/></head>
-<body>${content}</body>
+<body>
+  <h1>${chapter.title}</h1>
+  ${htmlContent}
+</body>
 </html>`);
         return { id: `chapter-${i + 1}`, href: `chapter-${i + 1}.xhtml` };
     });
@@ -132,19 +341,21 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         ...chapterFiles.map(f => `<item id="${f.id}" href="${f.href}" media-type="application/xhtml+xml"/>`),
         '<item id="css" href="style.css" media-type="text/css"/>',
         '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>'
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     const spineItems = [
         coverImage ? '<itemref idref="cover"/>' : '',
         ...chapterFiles.map(f => `<itemref idref="${f.id}"/>`)
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     oebps?.file('content.opf', `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="2.0">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
     <dc:title>${title}</dc:title>
     <dc:creator opf:role="aut">${author}</dc:creator>
-    ${contributor ? `<dc:contributor opf:role="oth">${contributor}</dc:contributor>` : ''}
+    ${contributors.length > 0 ? contributors.map(contributor => 
+      `<dc:contributor opf:role="oth">${contributor}</dc:contributor>`
+    ).join('\n    ') : ''}
     <dc:identifier id="bookid">urn:uuid:${crypto.randomUUID()}</dc:identifier>
     <dc:language>en</dc:language>
   </metadata>
@@ -152,7 +363,10 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
   <spine toc="ncx">${spineItems}</spine>
 </package>`);
 
-    const navPoints = chapters.map((c, i) => `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${c.title}</text></navLabel><content src="chapter-${i+1}.xhtml"/></navPoint>`).join('\n');
+    const navPoints = chapters.map((c, i) => 
+      `<navPoint id="navpoint-${i+1}" playOrder="${i+1}"><navLabel><text>${c.title}</text></navLabel><content src="chapter-${i+1}.xhtml"/></navPoint>`
+    ).join('\n');
+    
     oebps?.file('toc.ncx', `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
