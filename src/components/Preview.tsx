@@ -67,7 +67,7 @@ const parseContentToChunks = (content: string): ContentChunk[] => {
       }
       inPoem = true;
       currentChunk = { type: 'poem', lines: [] };
-    } else if (trimmed === '+') {
+    } else if (trimmedLine === '+') {
       if (currentChunk.lines.length > 0) {
         chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
       }
