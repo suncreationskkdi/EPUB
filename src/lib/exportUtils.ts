@@ -94,7 +94,9 @@ const markdownToHtml = (markdown: string): string => {
 
 const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string => {
   const coverPage = details.coverImage ? 
-    `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
+    `<div class="page">
+      <img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/>
+    </div>` : '';
   
   const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
     <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: ${details.colors.bookTitle};">${details.title}</h1>
@@ -105,6 +107,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
       `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; color: black;">${contributor}</p>`
     ).join('')}</div>` : ''}
     <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
+    <div class="page-number">2</div>
   </div>`;
 
   // Split chapters into pages based on complete paragraphs
@@ -119,6 +122,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     let currentPageLength = 0;
     const maxPageLength = 2000; // Maximum characters per page
     let isFirstPage = true;
+    let pageNumber = 3; // Start from page 3 (after cover and details)
     
     // Add chapter title to first page
     const chapterTitle = `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>`;
@@ -161,14 +165,22 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           ${isFirstPage ? chapterTitle : ''}
           ${currentPageContent}
         </div>
+        <div class="page-number">${pageNumber}</div>
       </div>`;
       pages.push(pageContent);
+       pageNumber++;
     }
     
     return pages;
   };
 
   const chapterPages = chapters.flatMap(chapter => splitChapterIntoPages(chapter)).join('');
+   
+   // Calculate total pages for numbering
+   let totalPages = 2; // Cover + Details pages
+   chapters.forEach(chapter => {
+     totalPages += splitChapterIntoPages(chapter).length;
+   });
 
   return `
     <!DOCTYPE html>
@@ -203,6 +215,14 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           right: 0;
           bottom: 0;
           overflow: hidden;
+        }
+        .page-number {
+          position: absolute;
+          bottom: 15mm;
+          right: 25mm;
+          font-family: 'Noto Sans', sans-serif;
+          font-size: 12px;
+          color: #666;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
@@ -284,6 +304,13 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
             height: 297mm;
             width: 210mm;
             page-break-after: always;
+          }
+          .page-number {
+            position: absolute;
+            bottom: 15mm;
+            right: 25mm;
+            font-size: 12px;
+            color: #666;
           }
           p, blockquote, ul, ol, pre {
             page-break-inside: avoid !important;
