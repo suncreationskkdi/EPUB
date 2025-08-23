@@ -93,7 +93,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
   
   const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
-    <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: black;">${details.title}</h1>
+    <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: ${details.colors.bookTitle};">${details.title}</h1>
     <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;">By ${details.author}</p>
     ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 4rem; color: black;">Published by ${details.publisher}</p>` : ''}
     ${details.contributors.length > 0 ? details.contributors.map(contributor => 
@@ -106,7 +106,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     const htmlContent = markdownToHtml(contentWithoutTitle);
     
     return `<div class="page" style="padding: 2rem; color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-      <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: black;">${chapter.title}</h1>
+      <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
       ${htmlContent}
     </div>`;
   }).join('');
@@ -139,7 +139,8 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
-          color: black;
+          color: ${details.colors.chapterTitle};
+          text-align: ${details.chapterAlignment};
         }
         h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
         h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -148,7 +149,8 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           margin: 1rem 0; 
           line-height: 1.6;
           text-align: justify;
-          color: black;
+          color: ${details.colors.paragraph};
+          text-indent: ${details.paragraphIndent ? '2em' : '0'};
         }
         ul, ol { 
           margin: 1rem 0; 
@@ -156,21 +158,21 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         }
         li { 
           margin: 0.5rem 0;
-          color: black;
+          color: ${details.colors.paragraph};
         }
         blockquote { 
           border-left: 4px solid #ccc; 
           padding-left: 1rem; 
           margin: 1rem 0; 
           font-style: italic;
-          color: black;
+          color: ${details.colors.paragraph};
         }
         code { 
           background: #f5f5f5; 
           padding: 0.2rem 0.4rem; 
           border-radius: 3px;
           font-family: monospace;
-          color: black;
+          color: ${details.colors.paragraph};
         }
         pre { 
           background: #f5f5f5; 
@@ -182,7 +184,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         pre code { 
           background: none; 
           padding: 0;
-          color: black;
+          color: ${details.colors.paragraph};
         }
         a { 
           color: #0066cc; 
@@ -190,12 +192,14 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         }
         .poem p { 
           margin: 0.2rem 0;
+          color: ${details.colors.paragraph};
         }
         .poem p:nth-child(2n) { 
           text-indent: 2em;
         }
         .poem2 p { 
           text-indent: 2em;
+          color: ${details.colors.paragraph};
         }
         @media print {
           .page {
@@ -263,13 +267,14 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       body { 
         font-family: 'Noto Sans', sans-serif; 
         line-height: 1.6;
-        color: black;
+        color: ${details.colors.paragraph};
         margin: 0;
         padding: 1rem;
       }
       h1, h2, h3 { 
         font-family: 'Noto Serif', serif;
-        color: black;
+        color: ${details.colors.chapterTitle};
+        text-align: ${details.chapterAlignment};
       }
       h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
       h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -361,7 +366,7 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>${chapter.title}</title><link href="style.css" rel="stylesheet" type="text/css"/></head>
 <body>
-  <h1>${chapter.title}</h1>
+  <h1 style="text-align: ${details.chapterAlignment}; color: ${details.colors.chapterTitle};">${chapter.title}</h1>
   ${htmlContent}
 </body>
 </html>`);

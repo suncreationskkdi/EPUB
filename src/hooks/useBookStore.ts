@@ -39,6 +39,7 @@ export const useBookStore = create<BookState>((set, get) => ({
     chapterTitle: '#000000', 
     paragraph: '#000000',
   },
+  chapterAlignment: 'left',
   paragraphIndent: false,
 
   // Chapter details

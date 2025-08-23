@@ -17,5 +17,6 @@ export interface BookDetails {
     chapterTitle: string;
     paragraph: string;
   };
+  chapterAlignment: 'left' | 'center' | 'right';
   paragraphIndent: boolean;
 }

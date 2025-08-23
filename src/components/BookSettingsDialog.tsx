@@ -19,6 +19,7 @@ const BookSettingsDialog: React.FC<BookSettingsDialogProps> = ({ isOpen, onClose
     license,
     colors,
     paragraphIndent,
+    chapterAlignment,
     coverImage, 
     setBookDetails, 
     setCoverImage,
@@ -148,6 +149,44 @@ const BookSettingsDialog: React.FC<BookSettingsDialogProps> = ({ isOpen, onClose
               <label htmlFor="paragraphIndent" className="text-sm font-medium text-text-secondary">
                 Enable paragraph indentation (first line indent)
               </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">Chapter Heading Alignment</label>
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="chapterAlignment"
+                    value="left"
+                    checked={chapterAlignment === 'left'}
+                    onChange={(e) => setBookDetails({ chapterAlignment: e.target.value as 'left' | 'center' | 'right' })}
+                    className="w-4 h-4 text-primary bg-surface border-border focus:ring-primary focus:ring-2"
+                  />
+                  <span className="text-sm text-text-secondary">Left</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="chapterAlignment"
+                    value="center"
+                    checked={chapterAlignment === 'center'}
+                    onChange={(e) => setBookDetails({ chapterAlignment: e.target.value as 'left' | 'center' | 'right' })}
+                    className="w-4 h-4 text-primary bg-surface border-border focus:ring-primary focus:ring-2"
+                  />
+                  <span className="text-sm text-text-secondary">Center</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="chapterAlignment"
+                    value="right"
+                    checked={chapterAlignment === 'right'}
+                    onChange={(e) => setBookDetails({ chapterAlignment: e.target.value as 'left' | 'center' | 'right' })}
+                    className="w-4 h-4 text-primary bg-surface border-border focus:ring-primary focus:ring-2"
+                  />
+                  <span className="text-sm text-text-secondary">Right</span>
+                </label>
+              </div>
             </div>
           </div>
 
