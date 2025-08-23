@@ -244,23 +244,57 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   // Helper function to split content into pages
   const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
     const htmlContent = markdownToHtml(content);
-    const maxContentLength = 2500; // More conservative characters per page
+    const maxContentLength = 2000; // Even more conservative for lengthy paragraphs
     
     if (htmlContent.length <= maxContentLength) {
       return [htmlContent];
     }
     
-    // Split by paragraphs and group them into pages
-    const paragraphs = htmlContent.split('</p>').filter(p => p.trim());
+    // Split by paragraphs first, then by sentences if paragraphs are too long
+    let paragraphs = htmlContent.split('</p>').filter(p => p.trim());
+    
+    // Handle very long paragraphs by splitting them at sentence boundaries
+    const processedParagraphs: string[] = [];
+    paragraphs.forEach(paragraph => {
+      const fullParagraph = paragraph + '</p>';
+      if (fullParagraph.length > 1500) { // If paragraph is too long
+        // Extract the text content and split by sentences
+        const textContent = fullParagraph.replace(/<[^>]*>/g, '');
+        const sentences = textContent.split(/(?<=[.!?])\s+/);
+        
+        let currentChunk = '';
+        const paragraphTag = fullParagraph.match(/<p[^>]*>/)?.[0] || '<p>';
+        
+        sentences.forEach((sentence, index) => {
+          const testChunk = currentChunk + (currentChunk ? ' ' : '') + sentence;
+          if (testChunk.length > 800 && currentChunk.length > 0) {
+            // Close current chunk and start new one
+            processedParagraphs.push(paragraphTag + currentChunk + '</p>');
+            currentChunk = sentence;
+          } else {
+            currentChunk = testChunk;
+          }
+          
+          // Add remaining content as last chunk
+          if (index === sentences.length - 1 && currentChunk) {
+            processedParagraphs.push(paragraphTag + currentChunk + '</p>');
+          }
+        });
+      } else {
+        processedParagraphs.push(fullParagraph);
+      }
+    });
+    
+    paragraphs = processedParagraphs;
     const pages: string[] = [];
     let currentPage = '';
     let isFirstPage = true;
     
     paragraphs.forEach((paragraph, index) => {
-      const fullParagraph = paragraph + (index < paragraphs.length - 1 ? '</p>' : '');
+      const fullParagraph = paragraph;
       
       // If adding this paragraph would exceed the limit and we have content, start a new page
-      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 500) {
+      if (currentPage.length + fullParagraph.length > maxContentLength && currentPage.length > 300) {
         pages.push(currentPage);
         currentPage = fullParagraph;
         isFirstPage = false;
@@ -306,8 +340,9 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           padding: 0; 
           background: white;
           color: black;
-        }
-        .page { 
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          hyphens: auto;
           width: 210mm; 
           height: 297mm; 
           padding: 20mm; 
@@ -334,8 +369,9 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .chapter-content p {
           orphans: 2;
           widows: 2;
-          word-wrap: break-word;
-          overflow-wrap: break-word;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          hyphens: auto;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
@@ -563,8 +599,9 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         text-align: justify;
         color: ${details.colors.paragraph};
         text-indent: ${details.paragraphIndent ? '2em' : '0'};
-        word-wrap: break-word;
-        overflow-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        hyphens: auto;
         orphans: 2;
         widows: 2;
       }
