@@ -101,7 +101,6 @@ const Preview: React.FC = () => {
           <p className="font-serif text-2xl text-gray-700">{author}</p>
           {publisher && <p className="text-gray-500 mt-8">{publisher}</p>}
           {ebookUrl && <p className="text-gray-500 mt-2">{ebookUrl}</p>}
-          <p className="text-gray-500 mt-4">{license}</p>
           {contributors.length > 0 && (
             <div className="mt-8">
               {contributors.map((contributor, index) => (
@@ -111,6 +110,7 @@ const Preview: React.FC = () => {
               ))}
             </div>
           )}
+          <p className="text-gray-500 mt-4">{license}</p>
         </div>
         {chapters.map((chapter) => {
           const contentWithTitle = `# ${chapter.title}\n${chapter.content.replace(/^# .*\n?/, '')}`;

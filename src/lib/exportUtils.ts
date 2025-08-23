@@ -97,10 +97,10 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;">By ${details.author}</p>
     ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 2rem; color: black;">${details.publisher}</p>` : ''}
     ${details.ebookUrl ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 0.5rem; color: black;">${details.ebookUrl}</p>` : ''}
-    <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
     ${details.contributors.length > 0 ? `<div style="margin-top: 2rem;">${details.contributors.map(contributor => 
       `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; color: black;">${contributor}</p>`
     ).join('')}</div>` : ''}
+    <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
   </div>`;
 
   const chapterPages = chapters.map(chapter => {
