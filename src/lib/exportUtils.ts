@@ -8,6 +8,19 @@ import { BookDetails, Chapter } from '../types';
 const markdownToHtml = (markdown: string): string => {
   let html = markdown;
   
+  // First, handle special formatting blocks
+  // Handle poem blocks first (before other processing)
+  html = html.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
+    const lines = content.split('\n').map((line: string, index: number) => 
+      `<p style="margin: 0; ${index % 2 === 1 ? 'text-indent: 2em;' : ''}">${line}</p>`
+    ).join('');
+    return `<div class="poem" style="margin: 1rem 0;">${lines}</div>`;
+  });
+  
+  // Handle custom alignment
+  html = html.replace(/^-r\s*(.*$)/gm, '<p style="text-align: right;">$1</p>');
+  html = html.replace(/^-c\s*(.*$)/gm, '<p style="text-align: center;">$1</p>');
+  
   // Handle headers
   html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
@@ -25,11 +38,20 @@ const markdownToHtml = (markdown: string): string => {
   html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
   
   // Handle unordered lists
-  html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  const ulItems = html.match(/^- .*$/gm);
+  if (ulItems) {
+    const listItems = ulItems.map(item => item.replace(/^- (.*)$/, '<li>$1</li>')).join('');
+    html = html.replace(/^- .*$/gm, '').replace(/\n+/g, '\n');
+    html = html + `<ul>${listItems}</ul>`;
+  }
   
   // Handle ordered lists
-  html = html.replace(/^\d+\. (.*$)/gm, '<li>$1</li>');
+  const olItems = html.match(/^\d+\. .*$/gm);
+  if (olItems) {
+    const listItems = olItems.map(item => item.replace(/^\d+\. (.*)$/, '<li>$1</li>')).join('');
+    html = html.replace(/^\d+\. .*$/gm, '').replace(/\n+/g, '\n');
+    html = html + `<ol>${listItems}</ol>`;
+  }
   
   // Handle links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
@@ -37,31 +59,23 @@ const markdownToHtml = (markdown: string): string => {
   // Handle images
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />');
   
-  // Handle custom formatting
-  html = html.replace(/^-r\s*(.*$)/gm, '<p style="text-align: right;">$1</p>');
-  html = html.replace(/^-c\s*(.*$)/gm, '<p style="text-align: center;">$1</p>');
+  // Clean up extra whitespace and newlines
+  html = html.replace(/\n\s*\n/g, '\n\n');
   
-  // Handle poem blocks
-  html = html.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
-    const lines = content.split('\n').map((line: string, index: number) => 
-      `<p style="margin: 0; ${index % 2 === 1 ? 'text-indent: 2em;' : ''}">${line}</p>`
-    ).join('');
-    return `<div class="poem" style="margin: 1rem 0;">${lines}</div>`;
-  });
-  
-  // Handle line breaks - convert double newlines to paragraphs
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-  
-  // Wrap in paragraphs if not already wrapped
-  if (!html.includes('<p>') && !html.includes('<h1>') && !html.includes('<h2>') && !html.includes('<h3>')) {
-    html = `<p>${html}</p>`;
-  } else if (!html.startsWith('<')) {
-    html = `<p>${html}`;
-  }
-  if (!html.endsWith('</p>') && !html.endsWith('>')) {
-    html = `${html}</p>`;
-  }
+  // Split into paragraphs and wrap each in <p> tags
+  const paragraphs = html.split('\n\n').filter(p => p.trim());
+  html = paragraphs.map(paragraph => {
+    const trimmed = paragraph.trim();
+    // Don't wrap if it's already a block element
+    if (trimmed.startsWith('<h') || trimmed.startsWith('<ul>') || trimmed.startsWith('<ol>') || 
+        trimmed.startsWith('<blockquote>') || trimmed.startsWith('<pre>') || 
+        trimmed.startsWith('<div') || trimmed.startsWith('<p ')) {
+      return trimmed;
+    }
+    // Replace single newlines with <br> within paragraphs
+    const withBreaks = trimmed.replace(/\n/g, '<br>');
+    return `<p>${withBreaks}</p>`;
+  }).join('\n');
   
   return html;
 };
