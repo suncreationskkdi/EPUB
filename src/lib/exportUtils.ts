@@ -444,55 +444,163 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
 };
 
 export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]) => {
-  // Create a temporary HTML document for PDF generation with smaller page size
-  const htmlContent = generateHtmlContent(details, chapters).replace(
-    'width: 210mm; min-height: 297mm;',
-    'width: 203.2mm; min-height: 152.4mm;'
-  );
-  
-  // Create a temporary iframe to render the HTML
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'absolute';
-  iframe.style.left = '-9999px';
-  iframe.style.width = '203.2mm';
-  iframe.style.height = '152.4mm';
-  document.body.appendChild(iframe);
-  
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!iframeDoc) return;
-  
-  iframeDoc.open();
-  iframeDoc.write(htmlContent);
-  iframeDoc.close();
-  
-  // Wait for content to load
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Create PDF with 8" x 6" page size (203.2mm x 152.4mm)
   const pdf = new jsPDF('p', 'mm', [203.2, 152.4]);
-  const pages = iframeDoc.querySelectorAll('.page') as NodeListOf<HTMLElement>;
+  const pageWidth = 203.2;
+  const pageHeight = 152.4;
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+  const contentHeight = pageHeight - (margin * 2);
   
-  for (let i = 0; i < pages.length; i++) {
-    const page = pages[i];
-    const canvas = await html2canvas(page, { 
-      scale: 1.2, 
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      removeContainer: true
-    });
-    const imgData = canvas.toDataURL('image/jpeg', 0.7);
-    
-    if (i > 0) {
-      pdf.addPage();
+  let currentY = margin;
+  let pageNumber = 1;
+  
+  // Helper function to add page number
+  const addPageNumber = (pageNum: number) => {
+    if (pageNum > 1) { // Don't add page number to cover
+      pdf.setFontSize(10);
+      pdf.setTextColor(102, 102, 102);
+      pdf.text(pageNum.toString(), pageWidth - margin, pageHeight - 10);
     }
-    // Fit content to 8" x 6" page
-    pdf.addImage(imgData, 'JPEG', 0, 0, 203.2, 152.4);
+  };
+  
+  // Helper function to check if we need a new page
+  const checkNewPage = (requiredHeight: number) => {
+    if (currentY + requiredHeight > pageHeight - margin) {
+      addPageNumber(pageNumber);
+      pdf.addPage();
+      pageNumber++;
+      currentY = margin;
+    }
+  };
+  
+  // Cover page
+  if (details.coverImage) {
+    try {
+      pdf.addImage(details.coverImage, 'JPEG', 0, 0, pageWidth, pageHeight);
+      addPageNumber(pageNumber);
+      pdf.addPage();
+      pageNumber++;
+      currentY = margin;
+    } catch (error) {
+      console.warn('Could not add cover image:', error);
+    }
   }
   
-  // Clean up
-  document.body.removeChild(iframe);
+  // Title page
+  pdf.setFontSize(18);
+  pdf.setTextColor(0, 0, 0);
+  const titleLines = wrapText(pdf, details.title, contentWidth);
+  titleLines.forEach(line => {
+    checkNewPage(10);
+    pdf.text(line, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 10;
+  });
+  
+  currentY += 8;
+  pdf.setFontSize(12);
+  pdf.text(`By ${details.author}`, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 15;
+  
+  if (details.publisher) {
+    pdf.setFontSize(10);
+    pdf.text(details.publisher, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
+  }
+  
+  if (details.ebookUrl) {
+    pdf.text(details.ebookUrl, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 6;
+  }
+  
+  if (details.contributors.length > 0) {
+    currentY += 8;
+    details.contributors.forEach(contributor => {
+      checkNewPage(6);
+      pdf.text(contributor, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+    });
+  }
+  
+  currentY += 8;
+  pdf.text(details.license, pageWidth / 2, currentY, { align: 'center' });
+  
+  addPageNumber(pageNumber);
+  pdf.addPage();
+  pageNumber++;
+  currentY = margin;
+  
+  // Process chapters
+  chapters.forEach((chapter) => {
+    // Chapter title
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    checkNewPage(12);
+    
+    const chapterTitleLines = wrapText(pdf, chapter.title, contentWidth);
+    chapterTitleLines.forEach(line => {
+      const alignment = details.chapterAlignment === 'center' ? 'center' : 
+                       details.chapterAlignment === 'right' ? 'right' : 'left';
+      const x = alignment === 'center' ? pageWidth / 2 : 
+               alignment === 'right' ? pageWidth - margin : margin;
+      
+      pdf.text(line, x, currentY, { align: alignment });
+      currentY += 12;
+    });
+    
+    currentY += 8;
+    
+    // Chapter content
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const htmlContent = markdownToHtml(contentWithoutTitle);
+    const plainText = htmlToPlainText(htmlContent);
+    
+    // Split into paragraphs
+    const paragraphs = plainText.split('\n\n').filter(p => p.trim());
+    
+    paragraphs.forEach(paragraph => {
+      if (!paragraph.trim()) return;
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Handle special formatting
+      let indent = 0;
+      let alignment: 'left' | 'center' | 'right' = 'left';
+      
+      if (paragraph.startsWith('    ')) {
+        indent = 15; // Poem indentation
+        paragraph = paragraph.substring(4);
+      } else if (paragraph.match(/^\s{20,}/)) {
+        alignment = 'center';
+        paragraph = paragraph.trim();
+      } else if (paragraph.match(/^\s{30,}/)) {
+        alignment = 'right';
+        paragraph = paragraph.trim();
+      }
+      
+      const lines = wrapText(pdf, paragraph, contentWidth - indent);
+      const paragraphHeight = lines.length * 5 + 6;
+      
+      checkNewPage(paragraphHeight);
+      
+      lines.forEach((line, index) => {
+        const x = alignment === 'center' ? pageWidth / 2 : 
+                 alignment === 'right' ? pageWidth - margin : 
+                 margin + indent + (details.paragraphIndent && index === 0 ? 8 : 0);
+        
+        pdf.text(line, x, currentY, { align: alignment });
+        currentY += 5;
+      });
+      
+      currentY += 6; // Space between paragraphs
+    });
+    
+    currentY += 8; // Space between chapters
+  });
+  
+  // Add page number to last page
+  addPageNumber(pageNumber);
+  
   pdf.save(`${details.title || 'ebook'}-small.pdf`);
 };
 
