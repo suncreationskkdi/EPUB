@@ -244,7 +244,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   // Helper function to split content into pages
   const splitContentIntoPages = (content: string, chapterTitle: string): string[] => {
     const htmlContent = markdownToHtml(content);
-    const maxContentLength = 2000; // Reduced characters per page to prevent overflow
+    const maxContentLength = 1500; // Further reduced to prevent cutoff
     
     if (htmlContent.length <= maxContentLength) {
       return [htmlContent];
@@ -293,7 +293,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     return contentPages.map((pageContent, pageIndex) => {
       const showTitle = pageIndex === 0; // Only show title on first page of chapter
       return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-        <div class="chapter-content" style="padding: 2rem;">
+        <div class="chapter-content" style="padding: 2rem; height: calc(100% - 4rem); overflow: hidden;">
           ${showTitle ? `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>` : ''}
           ${pageContent}
         </div>
@@ -319,7 +319,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         .page { 
           width: 210mm; 
           height: 297mm; 
-          padding: 20mm 16mm; 
+          padding: 15mm 16mm 25mm 16mm; 
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
@@ -332,60 +332,83 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           position: relative;
         }
         .chapter-content {
-          flex: 1;
+          flex: 1 1 auto;
           overflow: hidden;
           max-height: calc(297mm - 40mm);
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
           word-wrap: break-word;
           overflow-wrap: break-word;
         }
-        .chapter-content > * {
+        .chapter-content h1,
+        .chapter-content h2,
+        .chapter-content h3,
+        .chapter-content p,
+        .chapter-content div,
+        .chapter-content ul,
+        .chapter-content ol,
+        .chapter-content blockquote,
+        .chapter-content pre {
           page-break-inside: avoid;
           break-inside: avoid;
+          orphans: 3;
+          widows: 3;
         }
         .chapter-content p {
-          orphans: 2;
-          widows: 2;
+          orphans: 3;
+          widows: 3;
           word-wrap: break-word;
           overflow-wrap: break-word;
-          margin: 0.8rem 0;
-          line-height: 1.5;
+          margin: 0.6rem 0;
+          line-height: 1.4;
+          page-break-inside: avoid;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
           color: ${details.colors.chapterTitle};
           text-align: ${details.chapterAlignment};
           page-break-after: avoid;
+          break-after: avoid;
+          orphans: 3;
+          widows: 3;
         }
-        h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
-        h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
-        h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
+        h1 { font-size: 2.5rem; margin-bottom: 1.2rem; page-break-inside: avoid; }
+        h2 { font-size: 2rem; margin: 1.2rem 0 0.8rem 0; page-break-inside: avoid; }
+        h3 { font-size: 1.5rem; margin: 0.8rem 0 0.4rem 0; page-break-inside: avoid; }
         p { 
-          margin: 0.8rem 0; 
-          line-height: 1.5;
+          margin: 0.6rem 0; 
+          line-height: 1.4;
           text-align: justify;
           color: ${details.colors.paragraph};
           text-indent: ${details.paragraphIndent ? '2em' : '0'};
           word-wrap: break-word;
           overflow-wrap: break-word;
+          page-break-inside: avoid;
+          orphans: 3;
+          widows: 3;
         }
         ul, ol { 
-          margin: 0.8rem 0; 
+          margin: 0.6rem 0; 
           padding-left: 2rem;
+          page-break-inside: avoid;
         }
         li { 
-          margin: 0.5rem 0;
+          margin: 0.3rem 0;
           color: ${details.colors.paragraph};
           word-wrap: break-word;
           overflow-wrap: break-word;
+          page-break-inside: avoid;
         }
         blockquote { 
           border-left: 4px solid #ccc; 
           padding-left: 1rem; 
-          margin: 0.8rem 0; 
+          margin: 0.6rem 0; 
           font-style: italic;
           color: ${details.colors.paragraph};
           word-wrap: break-word;
           overflow-wrap: break-word;
+          page-break-inside: avoid;
         }
         code { 
           background: #f5f5f5; 
@@ -399,9 +422,10 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           padding: 1rem; 
           border-radius: 5px; 
           overflow-x: auto;
-          margin: 0.8rem 0;
+          margin: 0.6rem 0;
           word-wrap: break-word;
           overflow-wrap: break-word;
+          page-break-inside: avoid;
         }
         pre code { 
           background: none; 
@@ -415,7 +439,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           overflow-wrap: break-word;
         }
         .poem p { 
-          margin: 0.2rem 0;
+          margin: 0.1rem 0;
           color: ${details.colors.paragraph};
           word-wrap: break-word;
           overflow-wrap: break-word;
@@ -433,6 +457,12 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           .page {
             box-shadow: none;
             margin: 0;
+            page-break-after: always;
+          }
+          .chapter-content > * {
+            page-break-inside: avoid;
+            orphans: 3;
+            widows: 3;
           }
         }
       </style>
