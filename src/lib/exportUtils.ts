@@ -103,17 +103,17 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
   </div>`;
 
-  // Split chapters into pages based on paragraphs
+  // Split chapters into pages based on complete paragraphs
   const splitChapterIntoPages = (chapter: Chapter): string[] => {
     const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
     const htmlContent = markdownToHtml(contentWithoutTitle);
     
-    // Split content into paragraphs (including other block elements)
-    const elements = htmlContent.split(/(<\/(?:p|h[1-6]|ul|ol|blockquote|pre|div)>)/i);
+    // Split content into complete HTML elements
+    const elements = htmlContent.split(/(<\/(?:p|h[1-6]|ul|ol|blockquote|pre|div)>)/i).filter(el => el.trim());
     const pages: string[] = [];
     let currentPageContent = '';
-    let currentPageLength = 0;
-    const maxPageLength = 2500; // Characters per page
+    let currentPageElements = 0;
+    const maxElementsPerPage = 15; // Maximum elements per page
     let isFirstPage = true;
     
     // Add chapter title to first page
@@ -126,13 +126,22 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
       
       if (!element || !element.trim()) continue;
       
-      const elementLength = fullElement.length;
+      // Check if this is a complete paragraph or block element
+      const isCompleteElement = closingTag && (
+        closingTag.includes('</p>') || 
+        closingTag.includes('</h') || 
+        closingTag.includes('</ul>') || 
+        closingTag.includes('</ol>') || 
+        closingTag.includes('</blockquote>') || 
+        closingTag.includes('</pre>') || 
+        closingTag.includes('</div>')
+      );
       
       // If adding this element would exceed page limit and we have content, start new page
-      if (currentPageLength + elementLength > maxPageLength && currentPageContent.trim()) {
+      if (currentPageElements >= maxElementsPerPage && currentPageContent.trim() && isCompleteElement) {
         // Create page with current content
         const pageContent = `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-          <div class="chapter-content" style="padding: 2rem;">
+          <div class="chapter-content" style="padding: 25mm; padding-top: 20mm; padding-bottom: 20mm;">
             ${isFirstPage ? chapterTitle : ''}
             ${currentPageContent}
           </div>
@@ -141,19 +150,21 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         
         // Start new page
         currentPageContent = fullElement;
-        currentPageLength = elementLength;
+        currentPageElements = 1;
         isFirstPage = false;
       } else {
         // Add element to current page
         currentPageContent += fullElement;
-        currentPageLength += elementLength;
+        if (isCompleteElement) {
+          currentPageElements++;
+        }
       }
     }
     
     // Add the last page if it has content
     if (currentPageContent.trim()) {
       const pageContent = `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-        <div class="chapter-content" style="padding: 2rem;">
+        <div class="chapter-content" style="padding: 25mm; padding-top: 20mm; padding-bottom: 20mm;">
           ${isFirstPage ? chapterTitle : ''}
           ${currentPageContent}
         </div>
@@ -183,23 +194,28 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         }
         .page {
           width: 210mm; 
-          min-height: 297mm; 
-          padding: 20mm; 
+          height: 297mm; 
           box-sizing: border-box; 
           page-break-after: always;
           background: white;
           color: black;
           margin: 0 auto 2rem auto;
           box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          position: relative;
         }
         .chapter-content {
-          width: 100%;
-          height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow: hidden;
         }
         h1, h2, h3 { 
           font-family: 'Noto Serif', serif; 
           color: ${details.colors.chapterTitle};
           text-align: ${details.chapterAlignment};
+          page-break-after: avoid;
         }
         h1 { font-size: 2.5rem; margin-bottom: 1.5rem; }
         h2 { font-size: 2rem; margin: 1.5rem 0 1rem 0; }
@@ -210,10 +226,14 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           text-align: justify;
           color: ${details.colors.paragraph};
           text-indent: ${details.paragraphIndent ? '2em' : '0'};
+          page-break-inside: avoid;
+          orphans: 2;
+          widows: 2;
         }
         ul, ol { 
           margin: 1rem 0; 
           padding-left: 2rem;
+          page-break-inside: avoid;
         }
         li { 
           margin: 0.5rem 0;
@@ -225,6 +245,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           margin: 1rem 0; 
           font-style: italic;
           color: ${details.colors.paragraph};
+          page-break-inside: avoid;
         }
         code { 
           background: #f5f5f5; 
@@ -239,6 +260,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           border-radius: 5px; 
           overflow-x: auto;
           margin: 1rem 0;
+          page-break-inside: avoid;
         }
         pre code { 
           background: none; 
@@ -264,6 +286,8 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           .page {
             box-shadow: none;
             margin: 0;
+            height: 297mm;
+            width: 210mm;
           }
         }
       </style>
