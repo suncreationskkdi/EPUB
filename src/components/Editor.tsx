@@ -42,6 +42,7 @@ const Editor: React.FC = () => {
       case 'quote': newText = prefixLines('> '); cursorOffset = 2; break;
       case 'codeblock': newText = `\`\`\`\n${selectedText}\n\`\`\``; cursorOffset = 3; break;
       case 'poem': newText = `~\n${selectedText}\n~~`; break;
+      case 'poem2': newText = `+\n${selectedText}\n++`; break;
       case 'right': newText = `-r\n${selectedText}`; break;
       case 'center': newText = `-c\n${selectedText}`; break;
       case 'link': {

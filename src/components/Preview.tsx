@@ -4,17 +4,31 @@ import remarkGfm from 'remark-gfm';
 import { useBookStore } from '../hooks/useBookStore';
 
 interface ContentChunk {
-  type: 'markdown' | 'right' | 'center' | 'poem' | 'title';
+  type: 'markdown' | 'right' | 'center' | 'poem' | 'poem2' | 'title';
   content: string;
 }
 
 const parseContentToChunks = (content: string): ContentChunk[] => {
   const chunks: ContentChunk[] = [];
   const lines = content.split('\n');
-  let currentChunk: { type: 'markdown' | 'poem'; lines: string[] } = { type: 'markdown', lines: [] };
+  let currentChunk: { type: 'markdown' | 'poem' | 'poem2'; lines: string[] } = { type: 'markdown', lines: [] };
   let inPoem = false;
+  let inPoem2 = false;
 
   for (const line of lines) {
+    if (inPoem2) {
+      if (line.trim() === '++') {
+        inPoem2 = false;
+        if (currentChunk.lines.length > 0) {
+          chunks.push({ type: 'poem2', content: currentChunk.lines.join('\n') });
+        }
+        currentChunk = { type: 'markdown', lines: [] };
+      } else {
+        currentChunk.lines.push(line);
+      }
+      continue;
+    }
+
     if (inPoem) {
       if (line.trim() === '~~') {
         inPoem = false;
@@ -53,6 +67,12 @@ const parseContentToChunks = (content: string): ContentChunk[] => {
       }
       inPoem = true;
       currentChunk = { type: 'poem', lines: [] };
+    } else if (trimmed === '+') {
+      if (currentChunk.lines.length > 0) {
+        chunks.push({ type: 'markdown', content: currentChunk.lines.join('\n') });
+      }
+      inPoem2 = true;
+      currentChunk = { type: 'poem2', lines: [] };
     } else {
       currentChunk.lines.push(line);
     }
@@ -111,6 +131,14 @@ const Preview: React.FC = () => {
                         ))}
                       </div>
                     );
+                  case 'poem2':
+                    return (
+                      <div key={index} className="poem2 my-4">
+                        {chunk.content.split('\n').map((line, i) => (
+                          <p key={i} className="m-0 ml-8">{line}</p>
+                        ))}
+                      </div>
+                    );
                   case 'markdown':
                     return (
                       <ReactMarkdown
@@ -119,7 +147,7 @@ const Preview: React.FC = () => {
                         components={{
                           h2: ({node, ...props}) => <h2 className="text-3xl font-bold mt-6 mb-4 font-serif" {...props} />,
                           h3: ({node, ...props}) => <h3 className="text-2xl font-bold mt-4 mb-3 font-serif" {...props} />,
-                          p: ({node, ...props}) => <p className="my-4 leading-relaxed" {...props} />,
+                          p: ({node, ...props}) => <p className="my-4 leading-relaxed text-justify" {...props} />,
                           ul: ({node, ...props}) => <ul className="list-disc list-inside my-4" {...props} />,
                           ol: ({node, ...props}) => <ol className="list-decimal list-inside my-4" {...props} />,
                           blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4" {...props} />,
@@ -151,6 +179,9 @@ const Preview: React.FC = () => {
           page-break-before: always;
         }
         .preview-page .poem p:nth-child(2n) {
+          text-indent: 2em;
+        }
+        .poem2 p {
           text-indent: 2em;
         }
       `}</style>

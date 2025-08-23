@@ -14,7 +14,7 @@ export type FormatType =
   | 'ul' | 'ol'
   | 'quote' | 'codeblock'
   | 'link'
-  | 'poem' | 'right' | 'center';
+  | 'poem' | 'poem2' | 'right' | 'center';
 
 interface EditorToolbarProps {
   onApplyFormat: (format: FormatType) => void;
@@ -44,6 +44,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ onApplyFormat, onInsertIm
     ],
     [
       { icon: AlignLeft, format: 'poem' as const, tooltip: 'Poem Block' },
+      { icon: AlignLeft, format: 'poem2' as const, tooltip: 'Poem Block 2 (All Indented)' },
       { icon: AlignCenter, format: 'center' as const, tooltip: 'Center Align' },
       { icon: AlignRight, format: 'right' as const, tooltip: 'Right Align' },
     ]

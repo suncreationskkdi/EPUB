@@ -17,6 +17,14 @@ const markdownToHtml = (markdown: string): string => {
     return `<div class="poem" style="margin: 1rem 0;">${lines}</div>`;
   });
   
+  // Handle poem2 blocks (all lines indented)
+  html = html.replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
+    const lines = content.split('\n').map((line: string) => 
+      `<p style="margin: 0; text-indent: 2em;">${line}</p>`
+    ).join('');
+    return `<div class="poem2" style="margin: 1rem 0;">${lines}</div>`;
+  });
+  
   // Handle custom alignment
   html = html.replace(/^-r\s*(.*$)/gm, '<p style="text-align: right;">$1</p>');
   html = html.replace(/^-c\s*(.*$)/gm, '<p style="text-align: center;">$1</p>');
@@ -139,6 +147,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
         p { 
           margin: 1rem 0; 
           line-height: 1.6;
+          text-align: justify;
           color: black;
         }
         ul, ol { 
@@ -183,6 +192,9 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
           margin: 0.2rem 0;
         }
         .poem p:nth-child(2n) { 
+          text-indent: 2em;
+        }
+        .poem2 p { 
           text-indent: 2em;
         }
         @media print {
@@ -264,6 +276,7 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
       h3 { font-size: 1.5rem; margin: 1rem 0 0.5rem 0; }
       p { 
         margin: 1rem 0;
+        text-align: justify;
         color: black;
       }
       p.align-right { text-align: right; }
@@ -310,6 +323,9 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
         margin: 0.2rem 0;
       }
       div.poem p:nth-child(2n) { 
+        text-indent: 2em;
+      }
+      div.poem2 p { 
         text-indent: 2em;
       }
       img {
