@@ -99,9 +99,11 @@ const Preview: React.FC = () => {
         <div className="preview-page bg-white flex flex-col justify-center items-center text-center p-16">
           <h1 className="font-serif text-5xl mb-4" style={{ color: colors.bookTitle }}>{title}</h1>
           <p className="font-serif text-2xl text-gray-700">{author}</p>
-          {publisher && <p className="text-gray-500 mt-16">{publisher}</p>}
+          {publisher && <p className="text-gray-500 mt-8">{publisher}</p>}
+          {ebookUrl && <p className="text-gray-500 mt-2">{ebookUrl}</p>}
+          <p className="text-gray-500 mt-4">{license}</p>
           {contributors.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-8">
               {contributors.map((contributor, index) => (
                 <p key={index} className="text-gray-500">
                   {contributor}

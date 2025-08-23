@@ -95,10 +95,12 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
     <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: ${details.colors.bookTitle};">${details.title}</h1>
     <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;">By ${details.author}</p>
-    ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 4rem; color: black;">Published by ${details.publisher}</p>` : ''}
-    ${details.contributors.length > 0 ? details.contributors.map(contributor => 
+    ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 2rem; color: black;">${details.publisher}</p>` : ''}
+    ${details.ebookUrl ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 0.5rem; color: black;">${details.ebookUrl}</p>` : ''}
+    <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
+    ${details.contributors.length > 0 ? `<div style="margin-top: 2rem;">${details.contributors.map(contributor => 
       `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; color: black;">${contributor}</p>`
-    ).join('') : ''}
+    ).join('')}</div>` : ''}
   </div>`;
 
   const chapterPages = chapters.map(chapter => {
