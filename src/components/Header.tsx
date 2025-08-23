@@ -2,7 +2,7 @@ import React from 'react';
 import { BookOpen, Download, Settings } from 'lucide-react';
 import Button from './ui/Button';
 import { useBookStore } from '../hooks/useBookStore';
-import { exportToPDF, exportToHTML, exportToEPUB } from '../lib/exportUtils';
+import { exportToPDF, exportToPDFSmall, exportToHTML, exportToEPUB, exportToPlainText } from '../lib/exportUtils';
 import BookSettingsDialog from './BookSettingsDialog';
 
 const Header: React.FC = () => {
@@ -21,11 +21,16 @@ const Header: React.FC = () => {
             <Settings size={16} className="mr-2" />
             Book Settings
           </Button>
+          <Button variant="secondary" onClick={() => exportToPlainText(bookState, bookState.chapters)}>Plain Text</Button>
           <Button variant="secondary" onClick={() => exportToHTML(bookState, bookState.chapters)}>HTML</Button>
           <Button variant="secondary" onClick={() => exportToEPUB(bookState, bookState.chapters)}>EPUB</Button>
           <Button variant="primary" onClick={() => exportToPDF(bookState, bookState.chapters)}>
             <Download size={16} className="mr-2" />
             Export PDF
+          </Button>
+          <Button variant="primary" onClick={() => exportToPDFSmall(bookState, bookState.chapters)}>
+            <Download size={16} className="mr-2" />
+            PDF Small
           </Button>
         </div>
       </header>

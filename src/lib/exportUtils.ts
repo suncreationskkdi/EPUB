@@ -88,6 +88,61 @@ const markdownToHtml = (markdown: string): string => {
   return html;
 };
 
+// Helper function to convert markdown to plain text
+const markdownToPlainText = (markdown: string): string => {
+  let text = markdown;
+  
+  // Handle special formatting blocks first
+  // Handle poem blocks
+  text = text.replace(/~\n([\s\S]*?)\n~~/g, (match, content) => {
+    const lines = content.split('\n').map((line: string, index: number) => 
+      index % 2 === 1 ? `    ${line}` : line
+    ).join('\n');
+    return `\n${lines}\n`;
+  });
+  
+  // Handle poem2 blocks (all lines indented)
+  text = text.replace(/\+\n([\s\S]*?)\n\+\+/g, (match, content) => {
+    const lines = content.split('\n').map((line: string) => `    ${line}`).join('\n');
+    return `\n${lines}\n`;
+  });
+  
+  // Handle custom alignment
+  text = text.replace(/^-r\s*(.*$)/gm, '                                        $1'); // Right align with spaces
+  text = text.replace(/^-c\s*(.*$)/gm, '                    $1'); // Center align with spaces
+  
+  // Remove markdown formatting
+  text = text.replace(/^### (.*$)/gm, '$1'); // H3
+  text = text.replace(/^## (.*$)/gm, '$1'); // H2
+  text = text.replace(/^# (.*$)/gm, '$1'); // H1
+  
+  // Remove bold and italic
+  text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+  text = text.replace(/\*(.*?)\*/g, '$1');
+  
+  // Remove code blocks and inline code
+  text = text.replace(/```[\s\S]*?```/g, '');
+  text = text.replace(/`(.*?)`/g, '$1');
+  
+  // Handle blockquotes
+  text = text.replace(/^> (.*$)/gm, '    "$1"');
+  
+  // Handle lists
+  text = text.replace(/^- (.*$)/gm, '• $1');
+  text = text.replace(/^\d+\. (.*$)/gm, '$1');
+  
+  // Handle links
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+  
+  // Remove images
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '[Image: $1]');
+  
+  // Clean up extra whitespace
+  text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+  
+  return text.trim();
+};
+
 const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string => {
   const coverPage = details.coverImage ? 
     `<div class="page"><img src="${details.coverImage}" style="width:100%; height:100%; object-fit: cover;" alt="Cover"/></div>` : '';
@@ -240,6 +295,30 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
   }
 
   pdf.save(`${details.title || 'ebook'}.pdf`);
+};
+
+export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]) => {
+  const previewContainer = document.getElementById('preview-content');
+  if (!previewContainer) return;
+
+  // Create PDF with 8" x 6" page size (203.2mm x 152.4mm)
+  const pdf = new jsPDF('p', 'mm', [203.2, 152.4]);
+  const pages = previewContainer.querySelectorAll('.preview-page') as NodeListOf<HTMLElement>;
+
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const canvas = await html2canvas(page, { scale: 1.5, backgroundColor: '#ffffff' });
+    // Use JPEG for smaller file size with good quality
+    const imgData = canvas.toDataURL('image/jpeg', 0.85);
+    
+    if (i > 0) {
+      pdf.addPage();
+    }
+    // Fit content to 8" x 6" page
+    pdf.addImage(imgData, 'JPEG', 0, 0, 203.2, 152.4);
+  }
+
+  pdf.save(`${details.title || 'ebook'}-small.pdf`);
 };
 
 export const exportToHTML = (details: BookDetails, chapters: Chapter[]) => {
@@ -417,4 +496,48 @@ export const exportToEPUB = async (details: BookDetails, chapters: Chapter[]) =>
 
     const content = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
     saveAs(content, `${title || 'ebook'}.epub`);
+};
+
+export const exportToPlainText = (details: BookDetails, chapters: Chapter[]) => {
+  const { title, author, publisher, contributors, ebookUrl, license } = details;
+  
+  let content = '';
+  
+  // Title page
+  content += `${title.toUpperCase()}\n`;
+  content += `${'='.repeat(title.length)}\n\n`;
+  content += `By ${author}\n\n`;
+  
+  if (publisher) {
+    content += `${publisher}\n`;
+  }
+  if (ebookUrl) {
+    content += `${ebookUrl}\n`;
+  }
+  if (contributors.length > 0) {
+    content += '\n';
+    contributors.forEach(contributor => {
+      content += `${contributor}\n`;
+    });
+  }
+  content += `\n${license}\n`;
+  
+  content += '\n' + '='.repeat(50) + '\n\n';
+  
+  // Chapters
+  chapters.forEach((chapter, index) => {
+    if (index > 0) {
+      content += '\n' + '-'.repeat(30) + '\n\n';
+    }
+    
+    content += `${chapter.title.toUpperCase()}\n`;
+    content += `${'-'.repeat(chapter.title.length)}\n\n`;
+    
+    const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
+    const plainTextContent = markdownToPlainText(contentWithoutTitle);
+    content += plainTextContent + '\n\n';
+  });
+  
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  saveAs(blob, `${title || 'ebook'}.txt`);
 };
