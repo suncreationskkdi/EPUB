@@ -417,16 +417,38 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
 };
 
 export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => {
-  const previewContainer = document.getElementById('preview-content');
-  if (!previewContainer) return;
-
+  // Create a temporary HTML document for PDF generation
+  const htmlContent = generateHtmlContent(details, chapters);
+  
+  // Create a temporary iframe to render the HTML
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.left = '-9999px';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
+  document.body.appendChild(iframe);
+  
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) return;
+  
+  iframeDoc.open();
+  iframeDoc.write(htmlContent);
+  iframeDoc.close();
+  
+  // Wait for content to load
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const pages = previewContainer.querySelectorAll('.preview-page') as NodeListOf<HTMLElement>;
-
+  const pages = iframeDoc.querySelectorAll('.page') as NodeListOf<HTMLElement>;
+  
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const canvas = await html2canvas(page, { scale: 2, backgroundColor: '#ffffff' });
-    // Use JPEG for smaller file size with good quality
+    const canvas = await html2canvas(page, { 
+      scale: 2, 
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true
+    });
     const imgData = canvas.toDataURL('image/jpeg', 0.85);
     
     if (i > 0) {
@@ -434,22 +456,49 @@ export const exportToPDF = async (details: BookDetails, chapters: Chapter[]) => 
     }
     pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
   }
-
+  
+  // Clean up
+  document.body.removeChild(iframe);
   pdf.save(`${details.title || 'ebook'}.pdf`);
 };
 
 export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]) => {
-  const previewContainer = document.getElementById('preview-content');
-  if (!previewContainer) return;
-
+  // Create a temporary HTML document for PDF generation with smaller page size
+  const htmlContent = generateHtmlContent(details, chapters).replace(
+    'width: 210mm; height: 297mm;',
+    'width: 203.2mm; height: 152.4mm;'
+  );
+  
+  // Create a temporary iframe to render the HTML
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.left = '-9999px';
+  iframe.style.width = '203.2mm';
+  iframe.style.height = '152.4mm';
+  document.body.appendChild(iframe);
+  
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) return;
+  
+  iframeDoc.open();
+  iframeDoc.write(htmlContent);
+  iframeDoc.close();
+  
+  // Wait for content to load
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   // Create PDF with 8" x 6" page size (203.2mm x 152.4mm)
   const pdf = new jsPDF('p', 'mm', [203.2, 152.4]);
-  const pages = previewContainer.querySelectorAll('.preview-page') as NodeListOf<HTMLElement>;
-
+  const pages = iframeDoc.querySelectorAll('.page') as NodeListOf<HTMLElement>;
+  
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
-    const canvas = await html2canvas(page, { scale: 1.5, backgroundColor: '#ffffff' });
-    // Use JPEG for smaller file size with good quality
+    const canvas = await html2canvas(page, { 
+      scale: 1.5, 
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true
+    });
     const imgData = canvas.toDataURL('image/jpeg', 0.85);
     
     if (i > 0) {
@@ -458,7 +507,9 @@ export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]
     // Fit content to 8" x 6" page
     pdf.addImage(imgData, 'JPEG', 0, 0, 203.2, 152.4);
   }
-
+  
+  // Clean up
+  document.body.removeChild(iframe);
   pdf.save(`${details.title || 'ebook'}-small.pdf`);
 };
 
