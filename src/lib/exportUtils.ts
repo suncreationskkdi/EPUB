@@ -103,17 +103,68 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
     <p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 1rem; color: black;">${details.license}</p>
   </div>`;
 
-  const chapterPages = chapters.map(chapter => {
+  // Split chapters into pages based on paragraphs
+  const splitChapterIntoPages = (chapter: Chapter): string[] => {
     const contentWithoutTitle = chapter.content.replace(/^# .*\n?/, '');
     const htmlContent = markdownToHtml(contentWithoutTitle);
     
-    return `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
-      <div class="chapter-content" style="padding: 2rem;">
-        <h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>
-        ${htmlContent}
-      </div>
-    </div>`;
-  }).join('');
+    // Split content into paragraphs (including other block elements)
+    const elements = htmlContent.split(/(<\/(?:p|h[1-6]|ul|ol|blockquote|pre|div)>)/i);
+    const pages: string[] = [];
+    let currentPageContent = '';
+    let currentPageLength = 0;
+    const maxPageLength = 2500; // Characters per page
+    let isFirstPage = true;
+    
+    // Add chapter title to first page
+    const chapterTitle = `<h1 style="font-family: 'Noto Serif', serif; font-size: 2.5rem; margin-bottom: 2rem; color: ${details.colors.chapterTitle}; text-align: ${details.chapterAlignment};">${chapter.title}</h1>`;
+    
+    for (let i = 0; i < elements.length; i += 2) {
+      const element = elements[i];
+      const closingTag = elements[i + 1] || '';
+      const fullElement = element + closingTag;
+      
+      if (!element || !element.trim()) continue;
+      
+      const elementLength = fullElement.length;
+      
+      // If adding this element would exceed page limit and we have content, start new page
+      if (currentPageLength + elementLength > maxPageLength && currentPageContent.trim()) {
+        // Create page with current content
+        const pageContent = `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+          <div class="chapter-content" style="padding: 2rem;">
+            ${isFirstPage ? chapterTitle : ''}
+            ${currentPageContent}
+          </div>
+        </div>`;
+        pages.push(pageContent);
+        
+        // Start new page
+        currentPageContent = fullElement;
+        currentPageLength = elementLength;
+        isFirstPage = false;
+      } else {
+        // Add element to current page
+        currentPageContent += fullElement;
+        currentPageLength += elementLength;
+      }
+    }
+    
+    // Add the last page if it has content
+    if (currentPageContent.trim()) {
+      const pageContent = `<div class="page" style="color: black; font-family: 'Noto Sans', sans-serif; line-height: 1.6;">
+        <div class="chapter-content" style="padding: 2rem;">
+          ${isFirstPage ? chapterTitle : ''}
+          ${currentPageContent}
+        </div>
+      </div>`;
+      pages.push(pageContent);
+    }
+    
+    return pages;
+  };
+
+  const chapterPages = chapters.flatMap(chapter => splitChapterIntoPages(chapter)).join('');
 
   return `
     <!DOCTYPE html>
