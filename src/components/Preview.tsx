@@ -208,11 +208,8 @@ const Preview: React.FC = () => {
                 currentHeight = paragraphHeight;
               } else {
                 currentContent += (currentContent ? '\n\n' : '') + paragraph;
-                currentPageHeight += chunkHeight;
                 currentHeight += paragraphHeight;
-                pages.push([...currentPage]);
-                currentPage = [chunk];
-                currentPageHeight = chunkHeight;
+              }
             });
             
             if (currentContent.trim()) {
