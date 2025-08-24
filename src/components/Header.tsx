@@ -29,10 +29,6 @@ const Header: React.FC = () => {
             <Download size={16} className="mr-2" />
             Export PDF
           </Button>
-          <Button variant="primary" onClick={() => exportToPDFSmall(bookState, bookState.chapters)}>
-            <Download size={16} className="mr-2" />
-            PDF Small
-          </Button>
         </div>
       </header>
       
