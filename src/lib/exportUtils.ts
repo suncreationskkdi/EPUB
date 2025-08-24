@@ -620,7 +620,7 @@ export const exportToHTMLSinglePage = (details: BookDetails, chapters: Chapter[]
   
   const detailsSection = `<div class="title-section">
     <h1 class="book-title">${title}</h1>
-    <p class="author">By ${author}</p>
+    <p class="author">${author}</p>
     ${publisher ? `<p class="publisher">${publisher}</p>` : ''}
     ${ebookUrl ? `<p class="ebook-url">${ebookUrl}</p>` : ''}
     ${contributors.length > 0 ? `<div class="contributors">${contributors.map(contributor => 
