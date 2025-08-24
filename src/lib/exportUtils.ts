@@ -100,7 +100,7 @@ const generateHtmlContent = (details: BookDetails, chapters: Chapter[]): string 
   
   const detailsPage = `<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
     <h1 style="font-family: 'Noto Serif', serif; font-size: 48px; margin-bottom: 2rem; color: ${details.colors.bookTitle};">${details.title}</h1>
-    <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;">By ${details.author}</p>
+    <p style="font-family: 'Noto Serif', serif; font-size: 24px; color: black;"> ${details.author}</p>
     ${details.publisher ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 2rem; color: black;">${details.publisher}</p>` : ''}
     ${details.ebookUrl ? `<p style="font-family: 'Noto Sans', sans-serif; font-size: 16px; margin-top: 0.5rem; color: black;">${details.ebookUrl}</p>` : ''}
     ${details.contributors.length > 0 ? `<div style="margin-top: 2rem;">${details.contributors.map(contributor => 
@@ -498,7 +498,7 @@ export const exportToPDFSmall = async (details: BookDetails, chapters: Chapter[]
   
   currentY += 8;
   pdf.setFontSize(12);
-  pdf.text(`By ${details.author}`, pageWidth / 2, currentY, { align: 'center' });
+  pdf.text(` ${details.author}`, pageWidth / 2, currentY, { align: 'center' });
   currentY += 15;
   
   if (details.publisher) {
@@ -1027,7 +1027,7 @@ export const exportToPlainText = (details: BookDetails, chapters: Chapter[]) => 
   // Title page
   content += `${title.toUpperCase()}\n`;
   content += `${'='.repeat(title.length)}\n\n`;
-  content += `By ${author}\n\n`;
+  content += `${author}\n\n`;
   
   if (publisher) {
     content += `${publisher}\n`;
